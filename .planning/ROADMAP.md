@@ -36,7 +36,12 @@
 3. The cbindgen-generated header exposes exactly the 11 specified functions: `manzo_open`, `manzo_close`, `manzo_play`, `manzo_pause`, `manzo_stop`, `manzo_seek`, `manzo_set_eq`, `manzo_set_volume`, `manzo_set_pan`, `manzo_get_position`, `manzo_get_spectrum`.
 4. A `cargo test` in the Rust crate passes, confirming the core is independently testable.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [x] 01-01-PLAN.md — Rust crate: manzo-core staticlib + 11 FFI stubs + cbindgen config
+- [ ] 01-02-PLAN.md — Xcode project: ManzoApp with run-script, bridging header, linker flags
+- [ ] 01-03-PLAN.md — Integration verification: cargo test + xcodebuild end-to-end
 
 ---
 
@@ -181,7 +186,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build Foundation | 0/? | Not started | - |
+| 1. Build Foundation | 1/3 | In Progress | - |
 | 2. Audio Pipeline | 0/? | Not started | - |
 | 3. Playback Controls | 0/? | Not started | - |
 | 4. DSP Engine | 0/? | Not started | - |
