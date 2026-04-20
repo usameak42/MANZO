@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Build Foundation** — Cargo+Xcode dual build chain with cbindgen FFI bridge
+- [x] **Phase 1: Build Foundation** — Cargo+Xcode dual build chain with cbindgen FFI bridge
 - [ ] **Phase 2: Audio Pipeline** — Rust MP3 decode via mpg123-sys + cpal/CoreAudio float32 output
 - [ ] **Phase 3: Playback Controls** — Gapless playback, transport (play/pause/stop/seek), auto-advance
 - [ ] **Phase 4: DSP Engine** — 10-band Rust EQ (eq10dsp.cpp port), volume, and pan controls
@@ -40,8 +40,8 @@
 
 Plans:
 - [x] 01-01-PLAN.md — Rust crate: manzo-core staticlib + 11 FFI stubs + cbindgen config
-- [ ] 01-02-PLAN.md — Xcode project: ManzoApp with run-script, bridging header, linker flags
-- [ ] 01-03-PLAN.md — Integration verification: cargo test + xcodebuild end-to-end
+- [x] 01-02-PLAN.md — Xcode project: ManzoApp with run-script, bridging header, linker flags
+- [x] 01-03-PLAN.md — Integration verification: cargo test + xcodebuild end-to-end
 
 ---
 
@@ -186,7 +186,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build Foundation | 1/3 | In Progress | - |
+| 1. Build Foundation | 3/3 | Complete | 2026-04-20 |
 | 2. Audio Pipeline | 0/? | Not started | - |
 | 3. Playback Controls | 0/? | Not started | - |
 | 4. DSP Engine | 0/? | Not started | - |

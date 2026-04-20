@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-20T16:02:50.063Z"
+last_updated: "2026-04-20T16:06:00Z"
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 11
 ---
 
 # MANZO — Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Milestone: v1.0
 
-**Status:** Executing Phase 01
+**Status:** Phase 01 Complete — Ready for Phase 02
 **Phases:** 9 total
 
 | # | Phase | Status | Plans |
 |---|-------|--------|-------|
-| 1 | Build Foundation | In Progress (2/3) | 3 |
+| 1 | Build Foundation | Complete (3/3) | 3 |
 | 2 | Audio Pipeline | Not Started | 0 |
 | 3 | Playback Controls | Not Started | 0 |
 | 4 | DSP Engine | Not Started | 0 |
@@ -40,17 +40,21 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 | 8 | Playlist & Library | Not Started | 0 |
 | 9 | Online Streaming | Not Started | 0 |
 
-**Progress:** [███████░░░] 67%
+**Progress:** [█░░░░░░░░░] 11% (1/9 phases complete)
 
 ```
-[███░░░░░░░░░░░░░░░░░░░░░░░░░░░] 33% (Phase 01 plans)
+[██████████████████████████████] 100% (Phase 01 plans: 3/3)
 ```
 
 ---
 
 ## Performance Metrics
 
-*(Populated as phases complete)*
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 01-build-foundation | 01 | 4m | 2 | 5 |
+| 01-build-foundation | 02 | 1m | 1 | 6 |
+| 01-build-foundation | 03 | 2m | 2 | 2 |
 
 ---
 
@@ -58,6 +62,8 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 - cbindgen run via CLI (not just build.rs) to decouple header generation from Xcode build trigger (01-01)
 - xcodegen project.yml as source of truth for ManzoApp.xcodeproj — reproducible, diff-friendly, avoids hand-editing pbxproj (01-02)
+- Xcode project uses xcodegen (project.yml) for build config generation (01-03)
+- cbindgen run-script must use subshell cd pattern: `(cd <crate-dir> && cbindgen ...)` — `--crate <path>` flag is not a directory argument (01-03)
 
 ## Accumulated Context
 
@@ -70,6 +76,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 - Two `.behindWindow` NSVisualEffectView in one window = double-blur artifact — enforce one-per-window rule (Phase 5)
 - `isOpaque = false` must be set on NSWindow before `orderFront`; changing after causes compositor hiccup
 - `shouldRasterize = true` requires `rasterizationScale = 2.0` on Retina or layers appear blurry
+- ARCHS = arm64 / ONLY_ACTIVE_ARCH = NO required in Release config to force aarch64-apple-darwin target
 
 ### Open Questions
 
@@ -95,3 +102,4 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 2026-04-20 — Phase 1 planned (3 plans, 3 waves): Rust staticlib + cbindgen FFI bridge + Xcode wiring
 2026-04-20 — 01-01 complete: manzo-core staticlib (11 FFI stubs, manzo_core.h, arm64 libmanzo_core.a, 4 tests pass)
 2026-04-20 — 01-02 complete: ManzoApp Xcode project (xcodegen, run-script cargo build, bridging header, AppDelegate FFI smoke test)
+2026-04-20 — 01-03 complete: Build verification gate passed — all 8 criteria green; Phase 1 complete
