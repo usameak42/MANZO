@@ -99,48 +99,46 @@
 
 ## Traceability
 
-*(Populated during roadmap creation)*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | — | Pending |
-| BUILD-02 | — | Pending |
-| BUILD-03 | — | Pending |
-| AUDIO-01 | — | Pending |
-| AUDIO-02 | — | Pending |
-| AUDIO-03 | — | Pending |
-| AUDIO-04 | — | Pending |
-| AUDIO-05 | — | Pending |
-| DSP-01 | — | Pending |
-| DSP-02 | — | Pending |
-| DSP-03 | — | Pending |
-| DSP-04 | — | Pending |
-| SHELL-01 | — | Pending |
-| SHELL-02 | — | Pending |
-| SHELL-03 | — | Pending |
-| SHELL-04 | — | Pending |
-| SHELL-05 | — | Pending |
-| VIS-01 | — | Pending |
-| VIS-02 | — | Pending |
-| VIS-03 | — | Pending |
-| VIS-04 | — | Pending |
-| SPEC-01 | — | Pending |
-| SPEC-02 | — | Pending |
-| SPEC-03 | — | Pending |
-| SPEC-04 | — | Pending |
-| LIB-01 | — | Pending |
-| LIB-02 | — | Pending |
-| LIB-03 | — | Pending |
-| LIB-04 | — | Pending |
-| NET-01 | — | Pending |
-| NET-02 | — | Pending |
-| NET-03 | — | Pending |
+| BUILD-01 | Phase 1 | Pending |
+| BUILD-02 | Phase 1 | Pending |
+| BUILD-03 | Phase 1 | Pending |
+| AUDIO-01 | Phase 2 | Pending |
+| AUDIO-04 | Phase 2 | Pending |
+| AUDIO-02 | Phase 3 | Pending |
+| AUDIO-03 | Phase 3 | Pending |
+| AUDIO-05 | Phase 3 | Pending |
+| DSP-01 | Phase 4 | Pending |
+| DSP-02 | Phase 4 | Pending |
+| DSP-03 | Phase 4 | Pending |
+| DSP-04 | Phase 4 | Pending |
+| SHELL-01 | Phase 5 | Pending |
+| SHELL-02 | Phase 5 | Pending |
+| SHELL-03 | Phase 5 | Pending |
+| SHELL-04 | Phase 5 | Pending |
+| SHELL-05 | Phase 5 | Pending |
+| VIS-01 | Phase 6 | Pending |
+| VIS-02 | Phase 6 | Pending |
+| VIS-03 | Phase 6 | Pending |
+| VIS-04 | Phase 6 | Pending |
+| SPEC-01 | Phase 7 | Pending |
+| SPEC-02 | Phase 7 | Pending |
+| SPEC-03 | Phase 7 | Pending |
+| SPEC-04 | Phase 7 | Pending |
+| LIB-01 | Phase 8 | Pending |
+| LIB-02 | Phase 8 | Pending |
+| LIB-03 | Phase 8 | Pending |
+| LIB-04 | Phase 8 | Pending |
+| NET-01 | Phase 9 | Pending |
+| NET-02 | Phase 9 | Pending |
+| NET-03 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 32 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 32 ⚠️
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 after initial definition*
+*Last updated: 2026-04-20 after roadmap creation*
