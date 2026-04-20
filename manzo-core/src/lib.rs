@@ -88,7 +88,7 @@ pub extern "C" fn manzo_get_spectrum(
     count: usize,
 ) -> usize {
     let _ = (handle, out_buf);
-    count // stub: return count with zeros (buffer untouched)
+    count // stub: return count — buffer is NOT written (Phase 2 will write f32 zeros)
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,9 @@ mod tests {
 
     #[test]
     fn stub_get_spectrum_returns_count() {
+        // NOTE: null_mut() for out_buf is only safe here because the stub does NOT
+        // dereference out_buf. Phase 2 must allocate a real f32 buffer before calling
+        // the real implementation, or this will cause undefined behavior.
         let result = manzo_get_spectrum(std::ptr::null_mut(), std::ptr::null_mut(), 512);
         assert_eq!(result, 512, "manzo_get_spectrum stub must echo count");
     }
