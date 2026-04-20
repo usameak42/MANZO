@@ -17,7 +17,8 @@ Apple Silicon, with glass chrome you can feel and DSP math that is bit-accurate 
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Rust + Swift/AppKit FFI bridge via cbindgen — arm64 staticlib, C header, all 11 functions linked (Phase 1)
+- [x] Xcode + Cargo dual build system — run-script triggers cargo automatically, xcodebuild exits 0 (Phase 1)
 
 ### Active
 
@@ -68,7 +69,7 @@ Apple Silicon, with glass chrome you can feel and DSP math that is bit-accurate 
 | Float32 pipeline end-to-end | Eliminates double int16↔float conversion waterfall (spike 004) | — Pending |
 | MTKView with .rgba16Float + P3 | Wide-gamut spectrum from day one (spike 010, 011) | — Pending |
 | SDF single-pass bloom for spectrum v1 | MPS two-pass deferred to v2 (spike 011) | — Pending |
-| cbindgen for Swift-Rust FFI | Clean C header, ~10 function surface | — Pending |
+| cbindgen for Swift-Rust FFI | Clean C header, ~10 function surface | Validated — Phase 1 |
 
 ## Evolution
 
@@ -88,4 +89,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after initialization*
+*Last updated: 2026-04-20 — Phase 1 complete (Build Foundation)*
