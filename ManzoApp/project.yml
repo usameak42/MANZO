@@ -55,10 +55,9 @@ targets:
             --target aarch64-apple-darwin
           # Re-generate the C header after build
           if command -v cbindgen &> /dev/null; then
-            cbindgen \
-              --config "$SRCROOT/../manzo-core/cbindgen.toml" \
-              --crate "$SRCROOT/../manzo-core" \
-              --output "$SRCROOT/../manzo-core/manzo_core.h"
+            (cd "$SRCROOT/../manzo-core" && cbindgen \
+              --config cbindgen.toml \
+              --output manzo_core.h)
           fi
         outputFiles:
           - $(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release/libmanzo_core.a
