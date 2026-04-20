@@ -1,0 +1,64 @@
+name: ManzoApp
+options:
+  bundleIdPrefix: com.manzo
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    PRODUCT_NAME: ManzoApp
+    SWIFT_VERSION: "5.10"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    ARCHS: arm64
+    VALID_ARCHS: arm64
+    ONLY_ACTIVE_ARCH: NO
+    # Bridging header
+    SWIFT_OBJC_BRIDGING_HEADER: ManzoApp/ManzoApp-Bridging-Header.h
+    # Where to find libmanzo_core.a
+    LIBRARY_SEARCH_PATHS: "$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release"
+    # Where to find manzo_core.h (for the bridging header #include)
+    HEADER_SEARCH_PATHS: "$(SRCROOT)/../manzo-core"
+    # Link the static library
+    OTHER_LDFLAGS: "-lmanzo_core"
+
+targets:
+  ManzoApp:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: ManzoApp
+        excludes:
+          - "*.yml"
+    info:
+      path: ManzoApp/Info.plist
+      properties:
+        CFBundleName: ManzoApp
+        CFBundleIdentifier: com.manzo.ManzoApp
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "0.1.0"
+        NSPrincipalClass: NSApplication
+        NSMainNibFile: ""
+        LSMinimumSystemVersion: "15.0"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+    preBuildScripts:
+      - name: "Build Rust manzo-core"
+        shell: /bin/zsh
+        script: |
+          set -e
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo build --release \
+            --manifest-path "$SRCROOT/../manzo-core/Cargo.toml" \
+            --target aarch64-apple-darwin
+          # Re-generate the C header after build
+          if command -v cbindgen &> /dev/null; then
+            cbindgen \
+              --config "$SRCROOT/../manzo-core/cbindgen.toml" \
+              --crate "$SRCROOT/../manzo-core" \
+              --output "$SRCROOT/../manzo-core/manzo_core.h"
+          fi
+        outputFiles:
+          - $(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release/libmanzo_core.a
