@@ -61,7 +61,8 @@
 **: Rust audio core compiles as a `staticlib` linked into the Swift/AppKit app via a cbindgen-generated C header
 - [x] **BUILD-02
 **: FFI surface exposes exactly these functions: `manzo_open`, `manzo_close`, `manzo_play`, `manzo_pause`, `manzo_stop`, `manzo_seek`, `manzo_set_eq`, `manzo_set_volume`, `manzo_set_pan`, `manzo_get_position`, `manzo_get_spectrum`
-- [ ] **BUILD-03**: Cargo build is triggered via an Xcode run-script build phase; no manual `cargo build` required
+- [x] **BUILD-03
+**: Cargo build is triggered via an Xcode run-script build phase; no manual `cargo build` required
 
 ## v2 Requirements
 

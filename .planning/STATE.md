@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-20T15:59:18.115Z"
+last_updated: "2026-04-20T16:02:50.063Z"
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # MANZO — Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 | # | Phase | Status | Plans |
 |---|-------|--------|-------|
-| 1 | Build Foundation | In Progress (1/3) | 3 |
+| 1 | Build Foundation | In Progress (2/3) | 3 |
 | 2 | Audio Pipeline | Not Started | 0 |
 | 3 | Playback Controls | Not Started | 0 |
 | 4 | DSP Engine | Not Started | 0 |
@@ -40,7 +40,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 | 8 | Playlist & Library | Not Started | 0 |
 | 9 | Online Streaming | Not Started | 0 |
 
-**Progress:** 0/9 phases complete (1/3 plans in Phase 01)
+**Progress:** [███████░░░] 67%
 
 ```
 [███░░░░░░░░░░░░░░░░░░░░░░░░░░░] 33% (Phase 01 plans)
@@ -57,6 +57,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Decisions
 
 - cbindgen run via CLI (not just build.rs) to decouple header generation from Xcode build trigger (01-01)
+- xcodegen project.yml as source of truth for ManzoApp.xcodeproj — reproducible, diff-friendly, avoids hand-editing pbxproj (01-02)
 
 ## Accumulated Context
 
@@ -93,3 +94,4 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 2026-04-20 — Project initialized, roadmap created (9 phases, 32 requirements mapped)
 2026-04-20 — Phase 1 planned (3 plans, 3 waves): Rust staticlib + cbindgen FFI bridge + Xcode wiring
 2026-04-20 — 01-01 complete: manzo-core staticlib (11 FFI stubs, manzo_core.h, arm64 libmanzo_core.a, 4 tests pass)
+2026-04-20 — 01-02 complete: ManzoApp Xcode project (xcodegen, run-script cargo build, bridging header, AppDelegate FFI smoke test)
