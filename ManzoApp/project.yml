@@ -53,11 +53,10 @@ targets:
           cargo build --release \
             --manifest-path "$SRCROOT/../manzo-core/Cargo.toml" \
             --target aarch64-apple-darwin
-          # Re-generate the C header after build
-          if command -v cbindgen &> /dev/null; then
-            (cd "$SRCROOT/../manzo-core" && cbindgen \
-              --config cbindgen.toml \
-              --output manzo_core.h)
-          fi
+          # Re-generate the C header after build — hard-fail if cbindgen is absent
+          (cd "$SRCROOT/../manzo-core" && cbindgen \
+            --config cbindgen.toml \
+            --output manzo_core.h) \
+            || { echo "error: cbindgen not found — install with: cargo install cbindgen"; exit 1; }
         outputFiles:
           - $(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release/libmanzo_core.a
