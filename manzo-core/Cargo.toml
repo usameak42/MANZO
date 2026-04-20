@@ -1,0 +1,18 @@
+[package]
+name = "manzo-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "manzo_core"
+crate-type = ["staticlib"]
+
+[build-dependencies]
+cbindgen = "0.27"
+
+[dev-dependencies]
+# nothing yet — unit tests live in src/lib.rs
+
+[profile.release]
+opt-level = 3
+lto = true
