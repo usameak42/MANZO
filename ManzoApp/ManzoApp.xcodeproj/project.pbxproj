@@ -116,7 +116,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/zsh;
-			shellScript = "set -e\nexport PATH=\"$HOME/.cargo/bin:$PATH\"\ncargo build --release \\\n  --manifest-path \"$SRCROOT/../manzo-core/Cargo.toml\" \\\n  --target aarch64-apple-darwin\n# Re-generate the C header after build\nif command -v cbindgen &> /dev/null; then\n  (cd \"$SRCROOT/../manzo-core\" && cbindgen \\\n    --config cbindgen.toml \\\n    --output manzo_core.h)\nfi\n";
+			shellScript = "set -e\nexport PATH=\"$HOME/.cargo/bin:$PATH\"\ncargo build --release \\\n  --manifest-path \"$SRCROOT/../manzo-core/Cargo.toml\" \\\n  --target aarch64-apple-darwin\n# Re-generate the C header after build — hard-fail if cbindgen is absent\n(cd \"$SRCROOT/../manzo-core\" && cbindgen \\\n  --config cbindgen.toml \\\n  --output manzo_core.h) \\\n  || { echo \"error: cbindgen not found — install with: cargo install cbindgen\"; exit 1; }\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -136,32 +136,44 @@
 		0E27BDB1D4A3BBFA7CDB8FDB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../manzo-core";
 				INFOPLIST_FILE = ManzoApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "-lmanzo_core";
 				PRODUCT_BUNDLE_IDENTIFIER = com.manzo.ManzoApp;
 				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "ManzoApp/ManzoApp-Bridging-Header.h";
+				VALID_ARCHS = arm64;
 			};
 			name = Debug;
 		};
 		422F451AC9235ECFB746E249 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../manzo-core";
 				INFOPLIST_FILE = ManzoApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "-lmanzo_core";
 				PRODUCT_BUNDLE_IDENTIFIER = com.manzo.ManzoApp;
 				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "ManzoApp/ManzoApp-Bridging-Header.h";
+				VALID_ARCHS = arm64;
 			};
 			name = Release;
 		};

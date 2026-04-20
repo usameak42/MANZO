@@ -28,6 +28,14 @@ targets:
     type: application
     platform: macOS
     deploymentTarget: "15.0"
+    settings:
+      base:
+        ARCHS: arm64
+        VALID_ARCHS: arm64
+        LIBRARY_SEARCH_PATHS: "$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release"
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/../manzo-core"
+        OTHER_LDFLAGS: "-lmanzo_core"
+        SWIFT_OBJC_BRIDGING_HEADER: ManzoApp/ManzoApp-Bridging-Header.h
     sources:
       - path: ManzoApp
         excludes:
