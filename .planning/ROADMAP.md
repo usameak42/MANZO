@@ -58,7 +58,12 @@ Plans:
 3. The mpg123 feed/read streaming API (`mpg123_open_feed` → `mpg123_feed` → `mpg123_read`) is used; `AVAudioFile` and `AVFoundation` are not used for decode.
 4. The Rust audio thread runs independently without blocking the Swift main thread.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Cargo.toml deps (mpg123-sys, cpal) + CC0 test MP3 fixture
+- [ ] 02-02-PLAN.md — lib.rs full implementation: InnerState, mpg123 feed/read, cpal float32 stream, all 11 FFI bodies
+- [ ] 02-03-PLAN.md — Integration tests + AppDelegate real MP3 wiring
 
 ---
 
