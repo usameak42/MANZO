@@ -69,6 +69,26 @@ void manzo_set_pan(struct manzo_ManzoHandle *handle, float pan);
 uint64_t manzo_get_position(struct manzo_ManzoHandle *handle);
 
 /**
+ * Returns the current playback state as an i32 (D-02):
+ *   1 = PLAYING — audio callback actively writing PCM
+ *   2 = PAUSED  — manzo_pause was called; callback fills silence
+ *   3 = STOPPED — manzo_stop was called, or handle is fresh / never played
+ *   4 = ENDED   — natural EOF reached by audio callback (mpg123 returned DONE)
+ * Returns 3 (STOPPED) when handle is null — safe sentinel.
+ */
+int32_t manzo_get_state(struct manzo_ManzoHandle *handle);
+
+/**
+ * Returns total track duration in milliseconds (D-03), or 0 if unavailable.
+ * Computed as `mpg123_length() / sample_rate * 1000`. Returns 0 when:
+ *   - handle is null
+ *   - sample_rate is 0 (decoder format not yet detected)
+ *   - mpg123_length returns MPG123_ERR (negative) — e.g. CBR file without LAME header.
+ * CBR scanning is deferred to Phase 8 (D-03).
+ */
+uint64_t manzo_get_duration(struct manzo_ManzoHandle *handle);
+
+/**
  * Fills `out_buf` with `count` float32 FFT magnitude values (range [0.0, 1.0]).
  * Returns number of values written. `out_buf` must be at least `count` elements.
  */

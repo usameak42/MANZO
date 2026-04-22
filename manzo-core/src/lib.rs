@@ -507,6 +507,48 @@ pub extern "C" fn manzo_get_position(handle: *mut ManzoHandle) -> u64 {
     (state.position_samples * 1000) / state.sample_rate as u64
 }
 
+/// Returns the current playback state as an i32 (D-02):
+///   1 = PLAYING — audio callback actively writing PCM
+///   2 = PAUSED  — manzo_pause was called; callback fills silence
+///   3 = STOPPED — manzo_stop was called, or handle is fresh / never played
+///   4 = ENDED   — natural EOF reached by audio callback (mpg123 returned DONE)
+/// Returns 3 (STOPPED) when handle is null — safe sentinel.
+#[no_mangle]
+pub extern "C" fn manzo_get_state(handle: *mut ManzoHandle) -> i32 {
+    // T-02-05 / D-02: null guard returns STOPPED sentinel
+    if handle.is_null() {
+        return 3;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    state.playback_state
+}
+
+/// Returns total track duration in milliseconds (D-03), or 0 if unavailable.
+/// Computed as `mpg123_length() / sample_rate * 1000`. Returns 0 when:
+///   - handle is null
+///   - sample_rate is 0 (decoder format not yet detected)
+///   - mpg123_length returns MPG123_ERR (negative) — e.g. CBR file without LAME header.
+/// CBR scanning is deferred to Phase 8 (D-03).
+#[no_mangle]
+pub extern "C" fn manzo_get_duration(handle: *mut ManzoHandle) -> u64 {
+    // T-02-05: null guard
+    if handle.is_null() {
+        return 0;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    if state.sample_rate == 0 {
+        return 0;
+    }
+    // mpg123_length returns total samples (off_t) or MPG123_ERR (-1) when unknown
+    let total_samples = unsafe { mpg123_sys::mpg123_length(state.mpg_handle) };
+    if total_samples < 0 {
+        return 0; // CBR without LAME header — D-03: defer scanning to Phase 8
+    }
+    (total_samples as u64 * 1000) / state.sample_rate as u64
+}
+
 /// Fills `out_buf` with `count` float32 FFT magnitude values (range [0.0, 1.0]).
 /// Returns number of values written. `out_buf` must be at least `count` elements.
 #[no_mangle]
@@ -567,6 +609,24 @@ mod tests {
         assert!(
             buf.iter().all(|&v| v == 0.0_f32),
             "spectrum must zero-fill buffer"
+        );
+    }
+
+    #[test]
+    fn get_state_null_returns_stopped() {
+        let result = manzo_get_state(std::ptr::null_mut());
+        assert_eq!(
+            result, 3,
+            "manzo_get_state with null handle must return 3 (STOPPED) — D-02"
+        );
+    }
+
+    #[test]
+    fn get_duration_null_returns_zero() {
+        let result = manzo_get_duration(std::ptr::null_mut());
+        assert_eq!(
+            result, 0,
+            "manzo_get_duration with null handle must return 0"
         );
     }
 }
