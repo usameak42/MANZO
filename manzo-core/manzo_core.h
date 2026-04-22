@@ -80,11 +80,10 @@ int32_t manzo_get_state(struct manzo_ManzoHandle *handle);
 
 /**
  * Returns total track duration in milliseconds (D-03), or 0 if unavailable.
- * Computed as `mpg123_length() / sample_rate * 1000`. Returns 0 when:
- *   - handle is null
- *   - sample_rate is 0 (decoder format not yet detected)
- *   - mpg123_length returns MPG123_ERR (negative) — e.g. CBR file without LAME header.
- * CBR scanning is deferred to Phase 8 (D-03).
+ * Uses `total_samples` cached at open time via a secondary file-API mpg123 handle +
+ * `mpg123_scan()`. The feed/push API used by the primary handle does not support
+ * `mpg123_scan()`, so a secondary probe handle is used at open time (see manzo_open).
+ * Returns 0 when: handle is null, sample_rate is 0, or total_samples == -1 (unknown).
  */
 uint64_t manzo_get_duration(struct manzo_ManzoHandle *handle);
 
