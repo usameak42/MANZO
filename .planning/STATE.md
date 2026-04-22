@@ -16,7 +16,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-20)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** A tactile, skeuomorphic music player that sounds and looks like Winamp — running native on Apple Silicon, with glass chrome you can feel and DSP math bit-accurate to the original.
 **Current focus:** Phase 4 — DSP Engine
@@ -83,8 +83,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 - `isOpaque = false` must be set on NSWindow before `orderFront`; changing after causes compositor hiccup
 - `shouldRasterize = true` requires `rasterizationScale = 2.0` on Retina or layers appear blurry
 - ARCHS = arm64 / ONLY_ACTIVE_ARCH = NO required in Release config to force aarch64-apple-darwin target
-- WR-01 (Phase 3 code review): startup-skip divisor should be `/(4*channels)` not `/4` — fix before Phase 4 DSP wiring
-- WR-02 (Phase 3 code review): audio callback may spin on MPG123_OK + zero bytes in startup-skip block — fix before Phase 4
+
 
 ### Open Questions
 
@@ -109,4 +108,4 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 2026-04-20 — Project initialized, roadmap created (9 phases, 32 requirements mapped)
 2026-04-20 — Phase 1 complete: Rust staticlib + cbindgen FFI bridge + Xcode wiring verified
 2026-04-22 — Phase 2 complete: mpg123-sys + cpal float32 pipeline; audible playback confirmed
-2026-04-22 — Phase 3 complete: playback state machine (PLAYING/PAUSED/STOPPED/ENDED), 529-sample trim, manzo_get_state/duration FFI, Swift auto-advance via 100ms polling; 3 hardware UAT items pending
+2026-04-22 — Phase 3 complete: playback state machine, gapless 529-sample trim (divisor fixed), Swift auto-advance; UAT 5/5 passed; code review fixes applied (WR-01–04)

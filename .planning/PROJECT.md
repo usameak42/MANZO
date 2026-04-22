@@ -19,12 +19,12 @@ Apple Silicon, with glass chrome you can feel and DSP math that is bit-accurate 
 
 - [x] Rust + Swift/AppKit FFI bridge via cbindgen — arm64 staticlib, C header, all 11 functions linked (Phase 1)
 - [x] Xcode + Cargo dual build system — run-script triggers cargo automatically, xcodebuild exits 0 (Phase 1)
+- [x] MP3 decode pipeline: mpg123-sys feed/read → cpal float32 CoreAudio output, no int16 conversion (Phase 2)
+- [x] Gapless MP3 playback — 529-sample decoder delay trim, auto-advance via 100ms state poll (Phase 3)
 
 ### Active
 
-- [x] MP3 decode pipeline: mpg123-sys feed/read → cpal float32 CoreAudio output, no int16 conversion (Phase 2)
-- [ ] Gapless MP3 playback — 529-sample decoder delay trim
-- [ ] 10-band EQ (eq10dsp.cpp port to Rust, dual-biquad IIR)
+- [ ] 10-band EQ (eq10dsp.cpp port to Rust, dual-biquad IIR — gains pre-validated ±12 dB in FFI)
 - [ ] Frameless NSWindow with single-root `.behindWindow` vibrancy
 - [ ] 5-layer Neo-Aero specular panel stack (pure CALayer, no bitmaps)
 - [ ] Metal spectrum analyzer (MTKView, rgba16Float, P3, SDF bloom)
@@ -71,6 +71,8 @@ Apple Silicon, with glass chrome you can feel and DSP math that is bit-accurate 
 | MTKView with .rgba16Float + P3 | Wide-gamut spectrum from day one (spike 010, 011) | — Pending |
 | SDF single-pass bloom for spectrum v1 | MPS two-pass deferred to v2 (spike 011) | — Pending |
 | cbindgen for Swift-Rust FFI | Clean C header, ~10 function surface | Validated — Phase 1 |
+| startup-skip divisor uses `/(4*channels)` not `/4` | Per-channel f32 values ≠ mono frames; wrong divisor doubled gapless trim to 1058 samples | Fixed in code review (Phase 3) |
+| Test fixtures as Xcode Copy Bundle Resources | DerivedData path traversal from bundleURL is unreliable; bundle resources resolve correctly on all machines | Validated — Phase 3 |
 
 ## Evolution
 
@@ -90,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 — Phase 2 complete (Audio Pipeline: mpg123+cpal float32 decode pipeline)*
+*Last updated: 2026-04-22 — Phase 3 complete (Playback Controls: state machine, 529-sample gapless trim, Swift auto-advance)*
