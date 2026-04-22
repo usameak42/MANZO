@@ -188,6 +188,18 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
         &stream_config,
         move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             // T-02-08: recover from poisoned mutex; fill silence on failure
+            //
+            // KNOWN LIMITATION (WR-03): The mutex is held for the entire decode loop
+            // below, including all mpg123_read and mpg123_feed calls. This means
+            // manzo_pause and manzo_seek on the UI thread will block until the current
+            // audio callback completes. On a slow path this can exceed the 8 ms frame
+            // budget and produce a visible UI freeze or audio dropout.
+            //
+            // PHASE 5 FIX: Split InnerState into two structs:
+            //   - ControlState { is_playing, file_offset, position_samples } — mutex-guarded
+            //   - DecoderState { mpg_handle, file_data, ... } — audio-thread-only, no lock
+            // The callback copies out control flags at entry, releases the lock, then
+            // decodes without holding it. See spike 004 findings for the full pattern.
             let mut s = match inner_clone.lock() {
                 Ok(s) => s,
                 Err(e) => e.into_inner(),
