@@ -10,6 +10,7 @@ crate-type = ["staticlib"]
 [dependencies]
 mpg123-sys = "0.1"
 cpal = "0.15"
+libc = "0.2"
 
 [build-dependencies]
 cbindgen = "0.27"

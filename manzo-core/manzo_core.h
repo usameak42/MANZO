@@ -10,7 +10,7 @@
 
 /**
  * Opaque handle returned by manzo_open and passed to all subsequent calls.
- * Phase 2 replaces this with a real AudioPlayer state.
+ * The real state lives behind a raw pointer cast to Arc<Mutex<InnerState>>.
  */
 typedef struct manzo_ManzoHandle {
     uint8_t _private[0];
