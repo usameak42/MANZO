@@ -299,15 +299,21 @@ pub extern "C" fn manzo_stop(handle: *mut ManzoHandle) {
     // Reset decoder to beginning: re-open feed mode and re-feed first chunk
     let first_chunk_len = FEED_CHUNK_SIZE.min(state.file_data.len());
     if first_chunk_len > 0 {
-        unsafe {
-            mpg123_sys::mpg123_open_feed(state.mpg_handle);
-            mpg123_sys::mpg123_feed(
-                state.mpg_handle,
-                state.file_data.as_ptr(),
-                first_chunk_len,
-            );
+        let feed_ret = unsafe { mpg123_sys::mpg123_open_feed(state.mpg_handle) };
+        if feed_ret == 0 {
+            unsafe {
+                mpg123_sys::mpg123_feed(
+                    state.mpg_handle,
+                    state.file_data.as_ptr(),
+                    first_chunk_len,
+                );
+            }
+            state.file_offset = first_chunk_len;
+        } else {
+            // Open-feed reset failed; leave offset at 0 — next play will rebuild stream
+            state.file_offset = 0;
+            eprintln!("manzo_stop: mpg123_open_feed reset failed ({feed_ret})");
         }
-        state.file_offset = first_chunk_len;
     } else {
         state.file_offset = 0;
     }
