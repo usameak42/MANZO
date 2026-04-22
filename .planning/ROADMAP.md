@@ -80,7 +80,12 @@ Plans:
 3. When one track ends the app automatically begins playing the next track in the playlist without a silence gap between them (529-sample decoder delay trimmed).
 4. Gapless transition is verified by back-to-back playback of two MP3 files — no audible pop or silence at the boundary.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Rust core: extend InnerState (playback_state + 529-sample trim) and add manzo_get_state / manzo_get_duration FFI getters
+- [ ] 03-02-PLAN.md — Test fixture (test2.mp3) + integration tests for state transitions, duration, and ENDED detection
+- [ ] 03-03-PLAN.md — Swift AppDelegate: 2-track auto-advance demo via 100ms manzo_get_state polling
 
 ---
 
@@ -193,7 +198,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Build Foundation | 3/3 | Complete | 2026-04-20 |
 | 2. Audio Pipeline | 0/? | Not started | - |
-| 3. Playback Controls | 0/? | Not started | - |
+| 3. Playback Controls | 0/3 | Ready to Execute | - |
 | 4. DSP Engine | 0/? | Not started | - |
 | 5. UI Shell | 0/? | Not started | - |
 | 6. Neo-Aero Visual Stack | 0/? | Not started | - |
