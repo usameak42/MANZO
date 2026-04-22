@@ -11,7 +11,7 @@
 
 - [x] **Phase 1: Build Foundation** — Cargo+Xcode dual build chain with cbindgen FFI bridge
 - [ ] **Phase 2: Audio Pipeline** — Rust MP3 decode via mpg123-sys + cpal/CoreAudio float32 output
-- [ ] **Phase 3: Playback Controls** — Gapless playback, transport (play/pause/stop/seek), auto-advance
+- [x] **Phase 3: Playback Controls** — Gapless playback, transport (play/pause/stop/seek), auto-advance
 - [ ] **Phase 4: DSP Engine** — 10-band Rust EQ (eq10dsp.cpp port), volume, and pan controls
 - [ ] **Phase 5: UI Shell** — Frameless NSWindow, single-root vibrancy, drag region, window persistence
 - [ ] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
@@ -83,9 +83,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Rust core: extend InnerState (playback_state + 529-sample trim) and add manzo_get_state / manzo_get_duration FFI getters
-- [ ] 03-02-PLAN.md — Test fixture (test2.mp3) + integration tests for state transitions, duration, and ENDED detection
-- [ ] 03-03-PLAN.md — Swift AppDelegate: 2-track auto-advance demo via 100ms manzo_get_state polling
+- [x] 03-01-PLAN.md — Rust core: extend InnerState (playback_state + 529-sample trim) and add manzo_get_state / manzo_get_duration FFI getters
+- [x] 03-02-PLAN.md — Test fixture (test2.mp3) + integration tests for state transitions, duration, and ENDED detection
+- [x] 03-03-PLAN.md — Swift AppDelegate: 2-track auto-advance demo via 100ms manzo_get_state polling
 
 ---
 
@@ -197,8 +197,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Build Foundation | 3/3 | Complete | 2026-04-20 |
-| 2. Audio Pipeline | 0/? | Not started | - |
-| 3. Playback Controls | 0/3 | Ready to Execute | - |
+| 2. Audio Pipeline | 3/3 | Complete | 2026-04-22 |
+| 3. Playback Controls | 3/3 | Complete | 2026-04-22 |
 | 4. DSP Engine | 0/? | Not started | - |
 | 5. UI Shell | 0/? | Not started | - |
 | 6. Neo-Aero Visual Stack | 0/? | Not started | - |

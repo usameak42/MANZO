@@ -8,10 +8,10 @@
 ### Audio Core
 
 - [ ] **AUDIO-01**: App plays MP3 files with CoreAudio output via cpal on Apple Silicon
-- [ ] **AUDIO-02**: App achieves gapless playback by trimming the 529-sample mpg123 decoder delay in Rust
-- [ ] **AUDIO-03**: User can play, pause, stop, and seek within a track
-- [ ] **AUDIO-04**: App decodes MP3 via mpg123-sys feed/read streaming API with float32 pipeline end-to-end
-- [ ] **AUDIO-05**: App auto-advances to the next track in the playlist when a track ends
+- [x] **AUDIO-02**: App achieves gapless playback by trimming the 529-sample mpg123 decoder delay in Rust
+- [x] **AUDIO-03**: User can play, pause, stop, and seek within a track
+- [x] **AUDIO-04**: App decodes MP3 via mpg123-sys feed/read streaming API with float32 pipeline end-to-end
+- [x] **AUDIO-05**: App auto-advances to the next track in the playlist when a track ends
 
 ### DSP
 
