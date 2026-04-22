@@ -38,6 +38,12 @@ struct InnerState {
     // Initialized to 529 in manzo_open; decremented in audio callback as samples are discarded.
     // manzo_seek does NOT reset this counter (D-04: trim fires only on manzo_open).
     startup_skip_remaining: u64,
+    // Phase 3 (D-03): total track length in samples, computed at open time via a separate
+    // file-API mpg123 handle + mpg123_scan().
+    // -1 means unknown (e.g., CBR without LAME header that mpg123 cannot scan at open time).
+    // The feed/push API does not support mpg123_scan(); a secondary handle with mpg123_open()
+    // is used for duration probing while the primary handle keeps the feed API for streaming.
+    total_samples: i64,
 }
 
 // SAFETY: mpg_handle is only accessed while holding the Mutex.
@@ -112,8 +118,9 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         return std::ptr::null_mut();
     }
 
-    // Feed first chunk to bootstrap the decoder
-    let first_chunk_len = FEED_CHUNK_SIZE.min(file_data.len());
+    // Feed first chunk to bootstrap the primary (feed-API) decoder handle.
+    let file_len = file_data.len();
+    let first_chunk_len = FEED_CHUNK_SIZE.min(file_len);
     if first_chunk_len > 0 {
         unsafe {
             mpg123_sys::mpg123_feed(
@@ -123,6 +130,37 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
             );
         }
     }
+
+    // D-03: Probe total track length using a secondary mpg123 handle with the file API.
+    // The feed/push API does not support mpg123_scan(); mpg123_scan() always returns
+    // MPG123_ERR (-1) on feed handles. A secondary handle using mpg123_open() + mpg123_scan()
+    // is the only reliable way to get duration for CBR files at open time.
+    // The secondary handle is opened, scanned, and immediately closed — it is never stored.
+    let total_samples: i64 = unsafe {
+        let mut probe_err: libc::c_int = 0;
+        let probe_mh = mpg123_sys::mpg123_new(std::ptr::null(), &mut probe_err);
+        if !probe_mh.is_null() {
+            mpg123_sys::mpg123_param(
+                probe_mh,
+                mpg123_sys::MPG123_FLAGS,
+                mpg123_sys::MPG123_FORCE_FLOAT as libc::c_long,
+                0.0,
+            );
+            let open_ret = mpg123_sys::mpg123_open(probe_mh, path);
+            let result = if open_ret == 0 {
+                mpg123_sys::mpg123_scan(probe_mh);
+                let len = mpg123_sys::mpg123_length(probe_mh);
+                if len > 0 { len as i64 } else { -1 }
+            } else {
+                -1
+            };
+            mpg123_sys::mpg123_close(probe_mh);
+            mpg123_sys::mpg123_delete(probe_mh);
+            result
+        } else {
+            -1
+        }
+    };
 
     let inner = InnerState {
         mpg_handle: mh,
@@ -139,6 +177,7 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         eq_preamp: 0.0,
         playback_state: 3,           // STOPPED — D-02; no track playing on fresh open
         startup_skip_remaining: 529, // D-04: trim mpg123 decoder delay on first decode
+        total_samples,               // D-03: cached at open time via secondary file-API probe
     };
 
     let arc = Arc::new(Mutex::new(inner));
@@ -525,11 +564,10 @@ pub extern "C" fn manzo_get_state(handle: *mut ManzoHandle) -> i32 {
 }
 
 /// Returns total track duration in milliseconds (D-03), or 0 if unavailable.
-/// Computed as `mpg123_length() / sample_rate * 1000`. Returns 0 when:
-///   - handle is null
-///   - sample_rate is 0 (decoder format not yet detected)
-///   - mpg123_length returns MPG123_ERR (negative) — e.g. CBR file without LAME header.
-/// CBR scanning is deferred to Phase 8 (D-03).
+/// Uses `total_samples` cached at open time via a secondary file-API mpg123 handle +
+/// `mpg123_scan()`. The feed/push API used by the primary handle does not support
+/// `mpg123_scan()`, so a secondary probe handle is used at open time (see manzo_open).
+/// Returns 0 when: handle is null, sample_rate is 0, or total_samples == -1 (unknown).
 #[no_mangle]
 pub extern "C" fn manzo_get_duration(handle: *mut ManzoHandle) -> u64 {
     // T-02-05: null guard
@@ -541,12 +579,11 @@ pub extern "C" fn manzo_get_duration(handle: *mut ManzoHandle) -> u64 {
     if state.sample_rate == 0 {
         return 0;
     }
-    // mpg123_length returns total samples (off_t) or MPG123_ERR (-1) when unknown
-    let total_samples = unsafe { mpg123_sys::mpg123_length(state.mpg_handle) };
-    if total_samples < 0 {
-        return 0; // CBR without LAME header — D-03: defer scanning to Phase 8
+    // total_samples == -1 means unknown (CBR without LAME header mpg123 could not scan)
+    if state.total_samples < 0 {
+        return 0;
     }
-    (total_samples as u64 * 1000) / state.sample_rate as u64
+    (state.total_samples as u64 * 1000) / state.sample_rate as u64
 }
 
 /// Fills `out_buf` with `count` float32 FFT magnitude values (range [0.0, 1.0]).
