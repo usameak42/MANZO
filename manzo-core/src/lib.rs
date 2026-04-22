@@ -220,7 +220,7 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                 // Track position in mono-equivalent frames
                 s.position_samples += frames_written as u64 / s.channels as u64;
 
-                if ret == mpg123_sys::MPG123_NEED_MORE as i32 {
+                if ret == mpg123_sys::MPG123_NEED_MORE as libc::c_int {
                     // Feed next chunk from file_data
                     let start = s.file_offset;
                     let end = (start + FEED_CHUNK_SIZE).min(s.file_data.len());
