@@ -74,6 +74,9 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         Err(_) => return std::ptr::null_mut(),
     };
 
+    // Initialise mpg123 library (idempotent after first call; safe to call per-open)
+    unsafe { mpg123_sys::mpg123_init() };
+
     // Initialise mpg123 handle
     let mut err: libc::c_int = 0;
     let mh = unsafe { mpg123_sys::mpg123_new(std::ptr::null(), &mut err) };
