@@ -1,51 +1,359 @@
 //! manzo-core — Rust audio/DSP core for MANZO
 //! FFI surface: 11 C-callable functions, generated header via cbindgen
-//! All functions are stubs; real implementations added in Phase 2+
+//! Phase 2: Real MP3 decode + CoreAudio output pipeline
+
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::sync::{Arc, Mutex};
+use std::ffi::CStr;
 
 /// Opaque handle returned by manzo_open and passed to all subsequent calls.
-/// Phase 2 replaces this with a real AudioPlayer state.
+/// The real state lives behind a raw pointer cast to Arc<Mutex<InnerState>>.
 #[repr(C)]
 pub struct ManzoHandle {
     _private: [u8; 0],
+}
+
+/// Feed chunk size in bytes — validated pattern from spike 003; do not change.
+const FEED_CHUNK_SIZE: usize = 4096;
+
+/// Internal playback state, protected by Arc<Mutex<>> per D-02.
+struct InnerState {
+    mpg_handle: *mut mpg123_sys::mpg123_handle,
+    file_data: Vec<u8>,
+    file_offset: usize,
+    stream: Option<cpal::Stream>,
+    position_samples: u64,
+    sample_rate: u32,
+    channels: u16,
+    is_playing: bool,
+    // Phase 4 DSP fields — stored now, wired into DSP chain in Phase 4
+    volume: f32,
+    pan: f32,
+    eq_gains: [f32; 10],
+    eq_preamp: f32,
+}
+
+// SAFETY: mpg_handle is only accessed while holding the Mutex.
+// cpal::Stream is Send. The raw pointer never escapes InnerState.
+unsafe impl Send for InnerState {}
+unsafe impl Sync for InnerState {}
+
+impl Drop for InnerState {
+    fn drop(&mut self) {
+        // T-02-07: free mpg123 handle on drop to prevent resource leak
+        if !self.mpg_handle.is_null() {
+            unsafe {
+                mpg123_sys::mpg123_delete(self.mpg_handle);
+            }
+            self.mpg_handle = std::ptr::null_mut();
+        }
+        // stream: Option<cpal::Stream> drops automatically, stopping CoreAudio
+    }
 }
 
 /// Opens a file path for playback. Returns a non-null opaque handle on success,
 /// or null on failure. Caller owns the handle; must call manzo_close to free.
 #[no_mangle]
 pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHandle {
-    let _ = path; // used in Phase 2
-    std::ptr::null_mut()
+    // T-02-04: null-check MUST precede CStr::from_ptr — calling from_ptr(null) is UB
+    if path.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    // T-02-03: validate the C string before any filesystem access
+    let path_str = unsafe {
+        match CStr::from_ptr(path).to_str() {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        }
+    };
+
+    // Read entire file into memory
+    let file_data = match std::fs::read(path_str) {
+        Ok(data) => data,
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    // Initialise mpg123 handle
+    let mut err: libc::c_int = 0;
+    let mh = unsafe { mpg123_sys::mpg123_new(std::ptr::null(), &mut err) };
+    if mh.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    // CRITICAL: set MPG123_FORCE_FLOAT so output is always float32 — no int16 conversion
+    let param_ret = unsafe {
+        mpg123_sys::mpg123_param(
+            mh,
+            mpg123_sys::MPG123_FLAGS,
+            mpg123_sys::MPG123_FORCE_FLOAT as libc::c_long,
+            0.0,
+        )
+    };
+    if param_ret != 0 {
+        unsafe { mpg123_sys::mpg123_delete(mh); }
+        return std::ptr::null_mut();
+    }
+
+    // Open in feed/streaming mode (feed API, not file API)
+    let feed_ret = unsafe { mpg123_sys::mpg123_open_feed(mh) };
+    if feed_ret != 0 {
+        unsafe { mpg123_sys::mpg123_delete(mh); }
+        return std::ptr::null_mut();
+    }
+
+    // Feed first chunk to bootstrap the decoder
+    let first_chunk_len = FEED_CHUNK_SIZE.min(file_data.len());
+    if first_chunk_len > 0 {
+        unsafe {
+            mpg123_sys::mpg123_feed(
+                mh,
+                file_data.as_ptr(),
+                first_chunk_len,
+            );
+        }
+    }
+
+    let inner = InnerState {
+        mpg_handle: mh,
+        file_offset: first_chunk_len,
+        file_data,
+        stream: None,
+        position_samples: 0,
+        sample_rate: 44100,
+        channels: 2,
+        is_playing: false,
+        volume: 1.0,
+        pan: 0.0,
+        eq_gains: [0.0; 10],
+        eq_preamp: 0.0,
+    };
+
+    let arc = Arc::new(Mutex::new(inner));
+    Box::into_raw(Box::new(arc)) as *mut ManzoHandle
 }
 
 /// Closes and frees the handle returned by manzo_open.
 #[no_mangle]
 pub extern "C" fn manzo_close(handle: *mut ManzoHandle) {
-    let _ = handle; // real dealloc in Phase 2
+    // T-02-05: null guard
+    if handle.is_null() {
+        return;
+    }
+    // T-02-07: Box::from_raw takes ownership; drop frees Arc; InnerState::drop cleans mpg123
+    unsafe {
+        let arc = Box::from_raw(handle as *mut Arc<Mutex<InnerState>>);
+        drop(arc);
+    }
 }
 
 /// Starts or resumes playback. Returns 0 on success, non-zero on error.
 #[no_mangle]
 pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
-    let _ = handle;
+    // T-02-05 / D-04: null handle → -1
+    if handle.is_null() {
+        return -1;
+    }
+
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+
+    // T-02-08: recover from poisoned mutex
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+
+    // Idempotent: already playing
+    if state.is_playing {
+        return 0;
+    }
+
+    // Acquire cpal output device
+    let host = cpal::default_host();
+    let device = match host.default_output_device() {
+        Some(d) => d,
+        None => return -1,
+    };
+
+    let stream_config = cpal::StreamConfig {
+        channels: state.channels,
+        sample_rate: cpal::SampleRate(state.sample_rate),
+        buffer_size: cpal::BufferSize::Default,
+    };
+
+    // Clone Arc for the audio callback closure
+    let inner_clone = Arc::clone(arc);
+
+    let stream = match device.build_output_stream(
+        &stream_config,
+        move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+            // T-02-08: recover from poisoned mutex; fill silence on failure
+            let mut s = match inner_clone.lock() {
+                Ok(s) => s,
+                Err(e) => e.into_inner(),
+            };
+
+            if !s.is_playing {
+                data.fill(0.0);
+                return;
+            }
+
+            let mut written = 0usize;
+            while written < data.len() {
+                let mut done: libc::size_t = 0;
+                // f32 = 4 bytes per sample
+                let buf_byte_len = (data.len() - written) * 4;
+
+                // SAFETY: data[written..] is a valid f32 slice; cast to *mut u8 for mpg123_read.
+                // MPG123_FORCE_FLOAT guarantees IEEE 754 float32 output.
+                let ret = unsafe {
+                    mpg123_sys::mpg123_read(
+                        s.mpg_handle,
+                        data[written..].as_mut_ptr() as *mut libc::c_uchar,
+                        buf_byte_len,
+                        &mut done,
+                    )
+                };
+
+                let frames_written = done / 4; // bytes → f32 samples
+                written += frames_written;
+                // Track position in mono-equivalent frames
+                s.position_samples += frames_written as u64 / s.channels as u64;
+
+                if ret == mpg123_sys::MPG123_NEED_MORE as i32 {
+                    // Feed next chunk from file_data
+                    let start = s.file_offset;
+                    let end = (start + FEED_CHUNK_SIZE).min(s.file_data.len());
+                    if start < s.file_data.len() {
+                        unsafe {
+                            mpg123_sys::mpg123_feed(
+                                s.mpg_handle,
+                                s.file_data[start..end].as_ptr(),
+                                end - start,
+                            );
+                        }
+                        s.file_offset = end;
+                    } else if frames_written == 0 {
+                        // EOF — fill remainder with silence
+                        data[written..].fill(0.0);
+                        s.is_playing = false;
+                        break;
+                    }
+                } else if ret != 0 && frames_written == 0 {
+                    // Unrecoverable error or EOF
+                    data[written..].fill(0.0);
+                    break;
+                }
+            }
+        },
+        |err| eprintln!("cpal stream error: {err}"),
+        None,
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("failed to build output stream: {e}");
+            return -1;
+        }
+    };
+
+    if let Err(e) = stream.play() {
+        eprintln!("failed to start stream: {e}");
+        return -1;
+    }
+
+    state.stream = Some(stream);
+    state.is_playing = true;
     0
 }
 
 /// Pauses playback without resetting position.
 #[no_mangle]
 pub extern "C" fn manzo_pause(handle: *mut ManzoHandle) {
-    let _ = handle;
+    // T-02-05: null guard
+    if handle.is_null() {
+        return;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    // Set flag — audio callback fills silence when is_playing is false.
+    // Stream stays alive to allow resume without rebuilding the cpal pipeline.
+    state.is_playing = false;
 }
 
 /// Stops playback and resets position to start.
 #[no_mangle]
 pub extern "C" fn manzo_stop(handle: *mut ManzoHandle) {
-    let _ = handle;
+    // T-02-05: null guard
+    if handle.is_null() {
+        return;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+
+    state.is_playing = false;
+    state.position_samples = 0;
+
+    // Drop stream to stop CoreAudio
+    state.stream = None;
+
+    // Reset decoder to beginning: re-open feed mode and re-feed first chunk
+    let first_chunk_len = FEED_CHUNK_SIZE.min(state.file_data.len());
+    if first_chunk_len > 0 {
+        unsafe {
+            mpg123_sys::mpg123_open_feed(state.mpg_handle);
+            mpg123_sys::mpg123_feed(
+                state.mpg_handle,
+                state.file_data.as_ptr(),
+                first_chunk_len,
+            );
+        }
+        state.file_offset = first_chunk_len;
+    } else {
+        state.file_offset = 0;
+    }
 }
 
 /// Seeks to `position_ms` milliseconds from start. Returns 0 on success.
 #[no_mangle]
 pub extern "C" fn manzo_seek(handle: *mut ManzoHandle, position_ms: u64) -> i32 {
-    let _ = (handle, position_ms);
+    // T-02-05 / D-04: null handle → -1
+    if handle.is_null() {
+        return -1;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+
+    let sample_pos = (position_ms * state.sample_rate as u64) / 1000;
+    let mut input_byte_offset: libc::off_t = 0;
+
+    // mpg123_feedseek returns the new sample position (>= 0) on success, negative on error
+    let result = unsafe {
+        mpg123_sys::mpg123_feedseek(
+            state.mpg_handle,
+            sample_pos as libc::off_t,
+            libc::SEEK_SET,
+            &mut input_byte_offset,
+        )
+    };
+
+    if result < 0 {
+        return -1;
+    }
+
+    // Update file offset to byte position returned by feedseek
+    state.file_offset = (input_byte_offset as usize).min(state.file_data.len());
+
+    // Feed a chunk from the new position so the decoder has data
+    let end = (state.file_offset + FEED_CHUNK_SIZE).min(state.file_data.len());
+    if state.file_offset < state.file_data.len() {
+        unsafe {
+            mpg123_sys::mpg123_feed(
+                state.mpg_handle,
+                state.file_data[state.file_offset..end].as_ptr(),
+                end - state.file_offset,
+            );
+        }
+        state.file_offset = end;
+    }
+
+    state.position_samples = sample_pos;
     0
 }
 
@@ -57,26 +365,62 @@ pub extern "C" fn manzo_set_eq(
     gains: *const f32,
     preamp: f32,
 ) {
-    let _ = (handle, gains, preamp);
+    // T-02-05: null guard
+    if handle.is_null() {
+        return;
+    }
+    if gains.is_null() {
+        return;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    // SAFETY: caller guarantees gains points to at least 10 f32 values per the API contract
+    let gain_slice = unsafe { std::slice::from_raw_parts(gains, 10) };
+    state.eq_gains.copy_from_slice(gain_slice);
+    state.eq_preamp = preamp;
+    // Phase 4 wires these into the DSP chain
 }
 
 /// Sets master volume. `volume` is in range [0.0, 1.0].
 #[no_mangle]
 pub extern "C" fn manzo_set_volume(handle: *mut ManzoHandle, volume: f32) {
-    let _ = (handle, volume);
+    // T-02-05: null guard
+    if handle.is_null() {
+        return;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    state.volume = volume;
+    // Phase 4 wires into the DSP chain
 }
 
 /// Sets stereo pan. `pan` is in range [-1.0, 1.0]; 0.0 = center.
 #[no_mangle]
 pub extern "C" fn manzo_set_pan(handle: *mut ManzoHandle, pan: f32) {
-    let _ = (handle, pan);
+    // T-02-05: null guard
+    if handle.is_null() {
+        return;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    state.pan = pan;
+    // Phase 4 wires into the DSP chain
 }
 
 /// Returns the current playback position in milliseconds.
 #[no_mangle]
 pub extern "C" fn manzo_get_position(handle: *mut ManzoHandle) -> u64 {
-    let _ = handle;
-    0
+    // T-02-05: null guard → return 0
+    if handle.is_null() {
+        return 0;
+    }
+    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    if state.sample_rate == 0 {
+        return 0;
+    }
+    // Convert samples to milliseconds
+    (state.position_samples * 1000) / state.sample_rate as u64
 }
 
 /// Fills `out_buf` with `count` float32 FFT magnitude values (range [0.0, 1.0]).
@@ -87,8 +431,17 @@ pub extern "C" fn manzo_get_spectrum(
     out_buf: *mut f32,
     count: usize,
 ) -> usize {
-    let _ = (handle, out_buf);
-    count // stub: return count — buffer is NOT written (Phase 2 will write f32 zeros)
+    // T-02-06: guard against null buffer and zero count — write exactly count f32 zeros
+    if out_buf.is_null() || count == 0 {
+        return 0;
+    }
+    // D-01: zero-fill the buffer. FFT pipeline is Phase 7; buffer must always be written.
+    // write_bytes with val=0 on f32 produces 0.0 (IEEE 754: all-zero bytes = positive zero).
+    unsafe {
+        std::ptr::write_bytes(out_buf, 0, count);
+    }
+    let _ = handle; // unused until Phase 7 implements the FFT pipeline
+    count
 }
 
 // ---------------------------------------------------------------------------
@@ -99,29 +452,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stub_play_returns_zero() {
+    fn play_null_returns_minus_one() {
         let result = manzo_play(std::ptr::null_mut());
-        assert_eq!(result, 0, "manzo_play stub must return 0");
+        assert_eq!(result, -1, "manzo_play with null handle must return -1");
     }
 
     #[test]
-    fn stub_seek_returns_zero() {
+    fn seek_null_returns_minus_one() {
         let result = manzo_seek(std::ptr::null_mut(), 1000);
-        assert_eq!(result, 0, "manzo_seek stub must return 0");
+        assert_eq!(result, -1, "manzo_seek with null handle must return -1");
     }
 
     #[test]
     fn stub_get_position_returns_zero() {
         let result = manzo_get_position(std::ptr::null_mut());
-        assert_eq!(result, 0, "manzo_get_position stub must return 0");
+        assert_eq!(result, 0, "manzo_get_position with null handle must return 0");
     }
 
     #[test]
-    fn stub_get_spectrum_returns_count() {
-        // NOTE: null_mut() for out_buf is only safe here because the stub does NOT
-        // dereference out_buf. Phase 2 must allocate a real f32 buffer before calling
-        // the real implementation, or this will cause undefined behavior.
+    fn spectrum_null_buf_returns_zero() {
         let result = manzo_get_spectrum(std::ptr::null_mut(), std::ptr::null_mut(), 512);
-        assert_eq!(result, 512, "manzo_get_spectrum stub must echo count");
+        assert_eq!(result, 0, "null out_buf must return 0");
+    }
+
+    #[test]
+    fn spectrum_writes_zeros() {
+        let mut buf = vec![f32::NAN; 16];
+        let result = manzo_get_spectrum(std::ptr::null_mut(), buf.as_mut_ptr(), 16);
+        assert_eq!(result, 16);
+        assert!(
+            buf.iter().all(|&v| v == 0.0_f32),
+            "spectrum must zero-fill buffer"
+        );
     }
 }
