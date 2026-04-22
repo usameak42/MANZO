@@ -264,24 +264,28 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                 // Trims the 529-sample mpg123 decoder startup delay (spike-validated).
                 // Only fires once per manzo_open call; manzo_seek does NOT reset this counter.
                 if s.startup_skip_remaining > 0 {
-                    let remaining_in_buf_samples = data.len() - written;
-                    let skip_samples = (s.startup_skip_remaining as usize).min(remaining_in_buf_samples);
-                    let mut scratch = vec![0f32; skip_samples];
+                    // startup_skip_remaining counts mono-equivalent frames (529 frames = 529
+                    // time-units, each frame being `channels` per-channel f32 values).
+                    let remaining_frames = (data.len() - written) / s.channels as usize;
+                    let skip_frames = (s.startup_skip_remaining as usize).min(remaining_frames);
+                    let mut scratch = vec![0f32; skip_frames * s.channels as usize];
                     let mut discarded_bytes: libc::size_t = 0;
-                    let ret = unsafe {
+                    let _ret = unsafe {
                         mpg123_sys::mpg123_read(
                             s.mpg_handle,
                             scratch.as_mut_ptr() as *mut libc::c_uchar,
-                            skip_samples * 4,
+                            skip_frames * s.channels as usize * 4,
                             &mut discarded_bytes,
                         )
                     };
-                    let discarded_samples = discarded_bytes / 4;
+                    // Divide by bytes-per-frame (4 bytes/f32 × channels) to get frame count
+                    let discarded_frames = discarded_bytes / (4 * s.channels as usize);
                     s.startup_skip_remaining = s
                         .startup_skip_remaining
-                        .saturating_sub(discarded_samples as u64);
-                    if ret == mpg123_sys::MPG123_NEED_MORE as libc::c_int && discarded_samples == 0 {
-                        // Need more input — feed next chunk and retry on next iteration
+                        .saturating_sub(discarded_frames as u64);
+                    if discarded_frames == 0 {
+                        // No progress (zero bytes decoded regardless of ret code) — feed more
+                        // data to avoid infinite spin where mpg123_read returns OK with 0 bytes.
                         let start = s.file_offset;
                         let end = (start + FEED_CHUNK_SIZE).min(s.file_data.len());
                         if start < s.file_data.len() {
@@ -294,11 +298,11 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                             }
                             s.file_offset = end;
                         } else {
-                            // EOF reached during startup-skip — give up trimming, exit
+                            // EOF during startup-skip — give up trimming, exit
                             break;
                         }
                     }
-                    // Discarded samples are not added to `written` — they never reach output
+                    // Discarded frames are not added to `written` — they never reach output
                     continue;
                 }
 
