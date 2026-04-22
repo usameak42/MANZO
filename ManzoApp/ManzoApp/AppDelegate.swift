@@ -131,24 +131,16 @@ import AppKit
 
     // MARK: - Helpers
 
-    /// Resolves a fixture path: bundle resource first, then a dev fallback derived from
-    /// the bundle URL (rather than a hardcoded developer home directory). Returns the
-    /// derived path even if it does not exist on disk — caller checks fileExists.
-    /// Set MANZO_FIXTURE_DIR in the environment to override the fallback location (CI/test).
+    /// Resolves a fixture path from the app bundle (Copy Bundle Resources).
+    /// Falls back to MANZO_FIXTURE_DIR env var for CI overrides.
+    /// Returns empty string if not found — caller checks fileExists.
     private func resolveFixturePath(name: String, ext: String) -> String {
         if let bundlePath = Bundle.main.path(forResource: name, ofType: ext) {
             return bundlePath
         }
-        // Environment override for CI runners and test machines
         if let envDir = ProcessInfo.processInfo.environment["MANZO_FIXTURE_DIR"] {
             return (envDir as NSString).appendingPathComponent("\(name).\(ext)")
         }
-        // Dev fallback: derive relative to the .app bundle rather than hardcoding ~/Coding/MANZO
-        let devFixtures = Bundle.main.bundleURL
-            .deletingLastPathComponent()   // strips MyApp.app
-            .deletingLastPathComponent()   // strips build output dir (Debug/Release)
-            .appendingPathComponent("manzo-core/tests/fixtures/\(name).\(ext)")
-            .path
-        return devFixtures
+        return ""
     }
 }

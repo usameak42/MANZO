@@ -12,6 +12,8 @@
 		56D6897176EC8070696391FD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB29267B5851BABE6CA438B /* AppDelegate.swift */; };
 		5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */; };
 		B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */; };
+		C1B2C3D4E5F6A7B8C9D0E1F2 /* test.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* test.mp3 */; };
+		D1B2C3D4E5F6A7B8C9D0E1F2 /* test2.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1B2C3D4E5F6A7B8C9D0E1F2 /* test2.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +25,8 @@
 		D72C417C7828CF419FE9EAB8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		EFB29267B5851BABE6CA438B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		F48C620D8FA3FA52946B7FA1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* test.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = test.mp3; path = "../manzo-core/tests/fixtures/test.mp3"; sourceTree = SOURCE_ROOT; };
+		B1B2C3D4E5F6A7B8C9D0E1F2 /* test2.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = test2.mp3; path = "../manzo-core/tests/fixtures/test2.mp3"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +41,18 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E1B2C3D4E5F6A7B8C9D0E1F2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1B2C3D4E5F6A7B8C9D0E1F2 /* test.mp3 in Resources */,
+				D1B2C3D4E5F6A7B8C9D0E1F2 /* test2.mp3 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXGroup section */
 		292A7452D79A4F0E282C05FA = {
@@ -65,6 +81,8 @@
 				F48C620D8FA3FA52946B7FA1 /* Info.plist */,
 				D72C417C7828CF419FE9EAB8 /* main.swift */,
 				C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* test.mp3 */,
+				B1B2C3D4E5F6A7B8C9D0E1F2 /* test2.mp3 */,
 			);
 			path = ManzoApp;
 			sourceTree = "<group>";
@@ -87,6 +105,7 @@
 				2F3D6DCB5E9CE89B658D7F1C /* Build Rust manzo-core */,
 				327452F039B495435AB72156 /* Sources */,
 				713FF368C1ACA6BD2B84529B /* Frameworks */,
+				E1B2C3D4E5F6A7B8C9D0E1F2 /* Resources */,
 			);
 			buildRules = (
 			);
