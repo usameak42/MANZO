@@ -3,7 +3,7 @@
 **Milestone:** v1.0 — Initial Release
 **Granularity:** Fine
 **Requirements:** 32 v1 requirements
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-22
 
 ---
 
@@ -102,7 +102,12 @@ Plans:
 3. User can set master volume (0–100%) and stereo pan (left/center/right) via `manzo_set_volume` and `manzo_set_pan` FFI calls; changes are audibly immediate.
 4. EQ processing time on M1 stays under 0.1 ms per 1024-sample buffer, verified by Rust timing instrumentation.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — eq10.rs module: Eq10Band, Eq10State, eq10_processf, eq10_bsetup, eq10_db2gain (verbatim port of eq10dsp.cpp)
+- [ ] 04-02-PLAN.md — lib.rs wiring: extend InnerState, replace 3 FFI stubs, insert 5-stage DSP chain into cpal callback
+- [ ] 04-03-PLAN.md — Integration test: eq_perf_under_100us performance gate (D-07)
 
 ---
 
@@ -199,7 +204,7 @@ Plans:
 | 1. Build Foundation | 3/3 | Complete | 2026-04-20 |
 | 2. Audio Pipeline | 3/3 | Complete | 2026-04-22 |
 | 3. Playback Controls | 3/3 | Complete | 2026-04-22 |
-| 4. DSP Engine | 0/? | Not started | - |
+| 4. DSP Engine | 0/3 | Not started | - |
 | 5. UI Shell | 0/? | Not started | - |
 | 6. Neo-Aero Visual Stack | 0/? | Not started | - |
 | 7. Spectrum Analyzer | 0/? | Not started | - |
