@@ -1,5 +1,5 @@
 {
-  "mode": "yolo",
+  "mode": "standard",
   "granularity": "fine",
   "parallelization": true,
   "commit_docs": true,
@@ -10,7 +10,7 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": true,
-    "_auto_chain_active": true,
+    "_auto_chain_active": false,
     "discuss_mode": "discuss"
   }
 }

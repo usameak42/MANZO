@@ -625,21 +625,18 @@ This phase is not a rename/refactor/migration. No runtime state changes are requ
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`config_eq_limiter` as runtime field vs. compile-time constant**
+1. **`config_eq_limiter` as runtime field vs. compile-time constant** — RESOLVED: Runtime `bool` field in `InnerState` (default `true`).
    - What we know: CONTEXT.md defers this to Claude's discretion. The original C uses a global variable.
-   - What's unclear: Whether Phase 5+ needs to toggle the limiter on/off per-session via FFI.
    - Recommendation: Use a `bool` field in `InnerState` defaulting to `true`. Cost is one branch per buffer; benefit is runtime-toggleable for debugging.
 
-2. **In-place vs. separate output buffer**
+2. **In-place vs. separate output buffer** — RESOLVED: In-place port (`buf == outbuf`) for Phase 4.
    - What we know: The original supports `buf != outbuf`, but the Rust callback uses a single cpal output buffer.
-   - What's unclear: Whether any future phase needs separate in/out buffers.
-   - Recommendation: Port as in-place (`buf == outbuf`) for Phase 4. Add a note that the API could be extended to separate buffers later.
+   - Recommendation: Port as in-place for Phase 4. The API could be extended to separate buffers later.
 
-3. **Pan law: linear vs. constant-power**
-   - What we know: Winamp's original pan is implemented in the output plugin (`SetPan(0–255)`), not in the EQ chain. The exact pan law is not in `eq10dsp.cpp`.
-   - What's unclear: Whether the user expects constant-power (−3 dB at center-when-panned) or linear split.
+3. **Pan law: linear vs. constant-power** — RESOLVED: Linear split for Phase 4; constant-power deferred to Phase 5.
+   - What we know: Winamp's original pan is in the output plugin (`SetPan(0–255)`), not in the EQ chain. The exact pan law is not in `eq10dsp.cpp`.
    - Recommendation: Use linear split for Phase 4 (simpler; audibly acceptable). Constant-power is a Phase 5+ enhancement.
 
 ---

@@ -25,6 +25,10 @@ This project uses GSD (Get Shit Done) for planning and execution.
 - `/gsd-execute-phase N` — execute a planned phase
 - `/gsd-progress` — check current status
 
+## Execution Rules
+
+- When tasks within a phase are independent of each other, spawn multiple agents and run them in parallel. Do not work sequentially if parallelism is possible.
+
 ## Critical Constraints (from spikes)
 
 - One `.behindWindow` NSVisualEffectView at window root ONLY — nested vibrancy = double-blur artifact

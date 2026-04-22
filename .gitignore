@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Rust build artifacts
+target/
+
+# Xcode user data
+xcuserdata/
+*.xcuserdatad/
+
+# Winamp source (too large for git)
+winamp/
+
+# Temporary planning files
+.planning/tmp/
