@@ -503,8 +503,12 @@ pub extern "C" fn manzo_set_eq(
     let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
     // SAFETY: caller guarantees gains points to at least 10 f32 values per the API contract
     let gain_slice = unsafe { std::slice::from_raw_parts(gains, 10) };
-    state.eq_gains.copy_from_slice(gain_slice);
-    state.eq_preamp = preamp;
+    // Clamp to documented ±12.0 dB range; clamp also maps NaN to the boundary value,
+    // preventing NaN/Inf from propagating into the Phase 4 biquad DSP chain.
+    for (dst, &src) in state.eq_gains.iter_mut().zip(gain_slice.iter()) {
+        *dst = src.clamp(-12.0_f32, 12.0_f32);
+    }
+    state.eq_preamp = preamp.clamp(-12.0_f32, 12.0_f32);
     // Phase 4 wires these into the DSP chain
 }
 
