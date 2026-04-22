@@ -346,8 +346,16 @@ pub extern "C" fn manzo_seek(handle: *mut ManzoHandle, position_ms: u64) -> i32 
         return -1;
     }
 
-    // Update file offset to byte position returned by feedseek
-    state.file_offset = (input_byte_offset as usize).min(state.file_data.len());
+    // Update file offset to byte position returned by feedseek.
+    // Guard against a negative input_byte_offset: casting a negative i64 to usize
+    // wraps to a huge value, and the subsequent .min() would silently clamp to EOF.
+    let byte_offset = if input_byte_offset >= 0 {
+        (input_byte_offset as usize).min(state.file_data.len())
+    } else {
+        eprintln!("manzo_seek: unexpected negative input_byte_offset {input_byte_offset}");
+        0
+    };
+    state.file_offset = byte_offset;
 
     // Feed a chunk from the new position so the decoder has data
     let end = (state.file_offset + FEED_CHUNK_SIZE).min(state.file_data.len());
