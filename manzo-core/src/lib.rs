@@ -31,6 +31,13 @@ struct InnerState {
     pan: f32,
     eq_gains: [f32; 10],
     eq_preamp: f32,
+    // Phase 3 (D-02): playback state for manzo_get_state()
+    //   1 = PLAYING, 2 = PAUSED, 3 = STOPPED, 4 = ENDED
+    playback_state: i32,
+    // Phase 3 (D-04): 529-sample mpg123 decoder startup delay trim.
+    // Initialized to 529 in manzo_open; decremented in audio callback as samples are discarded.
+    // manzo_seek does NOT reset this counter (D-04: trim fires only on manzo_open).
+    startup_skip_remaining: u64,
 }
 
 // SAFETY: mpg_handle is only accessed while holding the Mutex.
@@ -130,6 +137,8 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         pan: 0.0,
         eq_gains: [0.0; 10],
         eq_preamp: 0.0,
+        playback_state: 3,           // STOPPED — D-02; no track playing on fresh open
+        startup_skip_remaining: 529, // D-04: trim mpg123 decoder delay on first decode
     };
 
     let arc = Arc::new(Mutex::new(inner));
@@ -212,6 +221,48 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
 
             let mut written = 0usize;
             while written < data.len() {
+                // D-04: discard startup_skip_remaining samples before writing to output.
+                // Trims the 529-sample mpg123 decoder startup delay (spike-validated).
+                // Only fires once per manzo_open call; manzo_seek does NOT reset this counter.
+                if s.startup_skip_remaining > 0 {
+                    let remaining_in_buf_samples = data.len() - written;
+                    let skip_samples = (s.startup_skip_remaining as usize).min(remaining_in_buf_samples);
+                    let mut scratch = vec![0f32; skip_samples];
+                    let mut discarded_bytes: libc::size_t = 0;
+                    let ret = unsafe {
+                        mpg123_sys::mpg123_read(
+                            s.mpg_handle,
+                            scratch.as_mut_ptr() as *mut libc::c_uchar,
+                            skip_samples * 4,
+                            &mut discarded_bytes,
+                        )
+                    };
+                    let discarded_samples = discarded_bytes / 4;
+                    s.startup_skip_remaining = s
+                        .startup_skip_remaining
+                        .saturating_sub(discarded_samples as u64);
+                    if ret == mpg123_sys::MPG123_NEED_MORE as libc::c_int && discarded_samples == 0 {
+                        // Need more input — feed next chunk and retry on next iteration
+                        let start = s.file_offset;
+                        let end = (start + FEED_CHUNK_SIZE).min(s.file_data.len());
+                        if start < s.file_data.len() {
+                            unsafe {
+                                mpg123_sys::mpg123_feed(
+                                    s.mpg_handle,
+                                    s.file_data[start..end].as_ptr(),
+                                    end - start,
+                                );
+                            }
+                            s.file_offset = end;
+                        } else {
+                            // EOF reached during startup-skip — give up trimming, exit
+                            break;
+                        }
+                    }
+                    // Discarded samples are not added to `written` — they never reach output
+                    continue;
+                }
+
                 let mut done: libc::size_t = 0;
                 // f32 = 4 bytes per sample
                 let buf_byte_len = (data.len() - written) * 4;
@@ -246,9 +297,10 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                         }
                         s.file_offset = end;
                     } else if frames_written == 0 {
-                        // EOF — fill remainder with silence
+                        // EOF — fill remainder with silence; signal ENDED to Swift poller (D-02)
                         data[written..].fill(0.0);
                         s.is_playing = false;
+                        s.playback_state = 4; // ENDED — distinct from STOPPED so Swift can auto-advance
                         break;
                     }
                 } else if ret != 0 && frames_written == 0 {
@@ -275,6 +327,7 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
 
     state.stream = Some(stream);
     state.is_playing = true;
+    state.playback_state = 1; // PLAYING — D-02
     0
 }
 
@@ -290,6 +343,7 @@ pub extern "C" fn manzo_pause(handle: *mut ManzoHandle) {
     // Set flag — audio callback fills silence when is_playing is false.
     // Stream stays alive to allow resume without rebuilding the cpal pipeline.
     state.is_playing = false;
+    state.playback_state = 2; // PAUSED — D-02
 }
 
 /// Stops playback and resets position to start.
@@ -303,6 +357,7 @@ pub extern "C" fn manzo_stop(handle: *mut ManzoHandle) {
     let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
 
     state.is_playing = false;
+    state.playback_state = 3; // STOPPED — D-02
     state.position_samples = 0;
 
     // Drop stream to stop CoreAudio
