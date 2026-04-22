@@ -22,7 +22,8 @@ Apple Silicon, with glass chrome you can feel and DSP math that is bit-accurate 
 
 ### Active
 
-- [ ] MP3 playback with gapless via mpg123 and cpal/CoreAudio
+- [x] MP3 decode pipeline: mpg123-sys feed/read → cpal float32 CoreAudio output, no int16 conversion (Phase 2)
+- [ ] Gapless MP3 playback — 529-sample decoder delay trim
 - [ ] 10-band EQ (eq10dsp.cpp port to Rust, dual-biquad IIR)
 - [ ] Frameless NSWindow with single-root `.behindWindow` vibrancy
 - [ ] 5-layer Neo-Aero specular panel stack (pure CALayer, no bitmaps)
@@ -63,8 +64,8 @@ Apple Silicon, with glass chrome you can feel and DSP math that is bit-accurate 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Rust + Swift/AppKit (Option B) | Direct eq10dsp.cpp port, safe concurrency, explicit NEON SIMD | — Pending |
-| mpg123-sys for MP3 decode | Feed/read streaming API, explicit 529-sample delay tracking | — Pending |
-| cpal for audio output | CoreAudio wrapper, matches Out_Module::Write non-blocking model | — Pending |
+| mpg123-sys for MP3 decode | Feed/read streaming API, explicit 529-sample delay tracking | Validated in Phase 2 |
+| cpal for audio output | CoreAudio wrapper, matches Out_Module::Write non-blocking model | Validated in Phase 2 |
 | One `.behindWindow` NSVisualEffectView at window root | CALayer-only panels avoid nested vibrancy artifacts (spike 007) | — Pending |
 | Float32 pipeline end-to-end | Eliminates double int16↔float conversion waterfall (spike 004) | — Pending |
 | MTKView with .rgba16Float + P3 | Wide-gamut spectrum from day one (spike 010, 011) | — Pending |
@@ -89,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 — Phase 1 complete (Build Foundation)*
+*Last updated: 2026-04-22 — Phase 2 complete (Audio Pipeline: mpg123+cpal float32 decode pipeline)*
