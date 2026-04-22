@@ -16,12 +16,12 @@ settings:
     ONLY_ACTIVE_ARCH: NO
     # Bridging header
     SWIFT_OBJC_BRIDGING_HEADER: ManzoApp/ManzoApp-Bridging-Header.h
-    # Where to find libmanzo_core.a
+    # Where to find libmanzo_core.a and libmpg123.dylib (copied to stable path by pre-build script)
     LIBRARY_SEARCH_PATHS: "$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release"
     # Where to find manzo_core.h (for the bridging header #include)
     HEADER_SEARCH_PATHS: "$(SRCROOT)/../manzo-core"
-    # Link the static library
-    OTHER_LDFLAGS: "-lmanzo_core"
+    # Link the static Rust library and the mpg123 dylib it depends on
+    OTHER_LDFLAGS: "-lmanzo_core -lmpg123"
 
 targets:
   ManzoApp:
@@ -34,8 +34,12 @@ targets:
         VALID_ARCHS: arm64
         LIBRARY_SEARCH_PATHS: "$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release"
         HEADER_SEARCH_PATHS: "$(SRCROOT)/../manzo-core"
-        OTHER_LDFLAGS: "-lmanzo_core"
+        OTHER_LDFLAGS: "-lmanzo_core -lmpg123"
         SWIFT_OBJC_BRIDGING_HEADER: ManzoApp/ManzoApp-Bridging-Header.h
+    dependencies:
+      - sdk: CoreAudio.framework
+      - sdk: AudioUnit.framework
+      - sdk: AudioToolbox.framework
     sources:
       - path: ManzoApp
         excludes:
@@ -66,5 +70,11 @@ targets:
             --config cbindgen.toml \
             --output manzo_core.h) \
             || { echo "error: cbindgen not found — install with: cargo install cbindgen"; exit 1; }
+          # Copy libmpg123.dylib to the stable release dir so Xcode linker can find -lmpg123
+          MPG123_LIB=$(find "$SRCROOT/../manzo-core/target/aarch64-apple-darwin/release/build" \
+            -name "libmpg123.dylib" -not -name "libmpg123.0.dylib" 2>/dev/null | head -1)
+          if [ -n "$MPG123_LIB" ]; then
+            cp "$MPG123_LIB" "$SRCROOT/../manzo-core/target/aarch64-apple-darwin/release/libmpg123.dylib"
+          fi
         outputFiles:
           - $(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release/libmanzo_core.a
