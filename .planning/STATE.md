@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-last_updated: "2026-04-20T16:06:00Z"
+last_updated: "2026-04-21T23:54:29.136Z"
 progress:
   total_phases: 9
   completed_phases: 2
-  total_plans: 3
+  total_plans: 6
   completed_plans: 3
   percent: 22
 ---
@@ -19,7 +19,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** A tactile, skeuomorphic music player that sounds and looks like Winamp — running native on Apple Silicon, with glass chrome you can feel and DSP math bit-accurate to the original.
-**Current focus:** Phase 01 — Build Foundation
+**Current focus:** Phase 2 — Audio Pipeline
 
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 | # | Phase | Status | Plans |
 |---|-------|--------|-------|
 | 1 | Build Foundation | Complete (3/3) | 3 |
-| 2 | Audio Pipeline | Not Started | 0 |
+| 2 | Audio Pipeline | Ready to Execute (3/3) | 3 |
 | 3 | Playback Controls | Not Started | 0 |
 | 4 | DSP Engine | Not Started | 0 |
 | 5 | UI Shell | Not Started | 0 |
@@ -103,3 +103,4 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 2026-04-20 — 01-01 complete: manzo-core staticlib (11 FFI stubs, manzo_core.h, arm64 libmanzo_core.a, 4 tests pass)
 2026-04-20 — 01-02 complete: ManzoApp Xcode project (xcodegen, run-script cargo build, bridging header, AppDelegate FFI smoke test)
 2026-04-20 — 01-03 complete: Build verification gate passed — all 8 criteria green; Phase 1 complete
+2026-04-22 — Phase 2 planned (3 plans, 3 waves): Cargo deps → lib.rs FFI implementation → integration tests + AppDelegate
