@@ -161,6 +161,10 @@ Neo-Aero CAGradientLayer stack on top of this hierarchy.
   the Neo-Aero visual pass; Phase 5 is `cornerRadius = 0`
 - Double-size (2×) mode — deferred; Winamp supported `config_dsize` to double all dimensions;
   Phase 5 hardcodes 275×116
+- `.wsz` skin loading (personal-use feature, not commercial) — v2 backlog. Phases 5/6 build a
+  fixed classic Winamp skin baked into the app. A `.wsz` parser (ZIP + BMP skin sheets +
+  `region.txt` polygon loader) is a future v2 phase; the Winamp source in `Winamp/Src/winamp/`
+  (`Set.cpp`, `SkinBitmapElement.cpp`) is the reference when that phase arrives.
 
 </deferred>
 
