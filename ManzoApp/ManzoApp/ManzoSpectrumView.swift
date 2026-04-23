@@ -51,9 +51,9 @@ class ManzoSpectrumView: MTKView {
 
     // MARK: - Render loop (SPEC-04)
 
-    private var displayLink: CADisplayLink?
-    private var backgroundThread: Thread?
-    private var backgroundRunLoop: RunLoop?
+    // DispatchSourceTimer at ~60fps on a dedicated .userInteractive queue.
+    // CADisplayLink(target:selector:) is iOS-only; on macOS use DispatchSourceTimer.
+    private var renderSource: DispatchSourceTimer?
 
     // MARK: - Initialization
 
@@ -172,44 +172,29 @@ class ManzoSpectrumView: MTKView {
     // Call this from AppDelegate after manzo_open + manzo_play succeeds.
     // CADisplayLink runs on a dedicated background thread — main thread is never blocked by GPU work.
     func startRenderLoop() {
-        guard displayLink == nil else { return }
-
-        // Create a commandQueue if not yet set (viewDidMoveToWindow may not have fired yet).
+        guard renderSource == nil else { return }
         if commandQueue == nil, let device = self.device {
             commandQueue = device.makeCommandQueue()
         }
-
-        // Launch background thread with its own RunLoop (SPEC-04).
-        let thread = Thread {
-            let runLoop = RunLoop.current
-            self.backgroundRunLoop = runLoop
-
-            // CADisplayLink on background thread — main thread is never blocked by GPU work (SPEC-04).
-            let link = CADisplayLink(target: self, selector: #selector(self.displayLinkFired))
-            link.add(to: runLoop, forMode: .common)
-            self.displayLink = link
-
-            NSLog("MANZO Phase 7: CADisplayLink render loop started on background thread")
-            runLoop.run() // runs until displayLink.invalidate() + CFRunLoopStop
-        }
-        thread.name = "ManzoSpectrumRender"
-        thread.qualityOfService = .userInteractive
-        thread.start()
-        backgroundThread = thread
+        let src = DispatchSource.makeTimerSource(
+            queue: DispatchQueue(label: "ManzoSpectrumRender", qos: .userInteractive)
+        )
+        src.schedule(deadline: .now(), repeating: 1.0 / 60.0, leeway: .milliseconds(2))
+        src.setEventHandler { [weak self] in self?.displayLinkFired() }
+        src.resume()
+        renderSource = src
+        NSLog("MANZO Phase 7: render loop started at 60fps on background queue")
     }
 
     func stopRenderLoop() {
-        displayLink?.invalidate()
-        displayLink = nil
-        if let rl = backgroundRunLoop {
-            CFRunLoopStop(rl.getCFRunLoop())
-        }
-        NSLog("MANZO Phase 7: CADisplayLink render loop stopped")
+        renderSource?.cancel()
+        renderSource = nil
+        NSLog("MANZO Phase 7: render loop stopped")
     }
 
     // MARK: - Per-Frame Render
 
-    @objc private func displayLinkFired() {
+    private func displayLinkFired() {
         // 1. Read FFT data from Rust core into the shared MTLBuffer.
         //    manzo_get_spectrum writes 75 floats into fftBuffer.contents() in normalized [0.0, 1.0].
         //    On Apple Silicon: this is a plain ARM STORE into unified physical RAM — no copy (SPEC-02).
