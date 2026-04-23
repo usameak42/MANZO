@@ -105,9 +105,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — eq10.rs module: Eq10Band, Eq10State, eq10_processf, eq10_bsetup, eq10_db2gain (verbatim port of eq10dsp.cpp)
-- [ ] 04-02-PLAN.md — lib.rs wiring: extend InnerState, replace 3 FFI stubs, insert 5-stage DSP chain into cpal callback
-- [ ] 04-03-PLAN.md — Integration test: eq_perf_under_100us performance gate (D-07)
+- [x] 04-01-PLAN.md — eq10.rs module: Eq10Band, Eq10State, eq10_processf, eq10_bsetup, eq10_db2gain (verbatim port of eq10dsp.cpp)
+- [x] 04-02-PLAN.md — lib.rs wiring: extend InnerState, replace 3 FFI stubs, insert 5-stage DSP chain into cpal callback
+- [x] 04-03-PLAN.md — Integration test: eq_perf_under_100us performance gate (D-07)
 
 ---
 
