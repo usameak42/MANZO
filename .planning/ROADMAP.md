@@ -13,7 +13,7 @@
 - [x] **Phase 2: Audio Pipeline** — Rust MP3 decode via mpg123-sys + cpal/CoreAudio float32 output
 - [x] **Phase 3: Playback Controls** — Gapless playback, transport (play/pause/stop/seek), auto-advance
 - [x] **Phase 4: DSP Engine** — 10-band Rust EQ (eq10dsp.cpp port), volume, and pan controls
-- [ ] **Phase 5: UI Shell** — Frameless NSWindow, single-root vibrancy, drag region, window persistence
+- [x] **Phase 5: UI Shell** — Frameless NSWindow, single-root vibrancy, drag region, window persistence
 - [ ] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
 - [ ] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
 - [ ] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
