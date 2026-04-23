@@ -105,13 +105,17 @@ import AppKit
         manzo_close(handle)
         manzoHandle = nil
 
-        // Advance the queue cursor.
+        // Advance the queue cursor; wrap around when UAT loop mode is active.
         currentTrackIndex += 1
-        guard currentTrackIndex < trackQueue.count else {
-            NSLog("MANZO Phase 3: queue exhausted (\(currentTrackIndex)/\(trackQueue.count)) — stopping poll timer")
-            pollTimer?.invalidate()
-            pollTimer = nil
-            return
+        if currentTrackIndex >= trackQueue.count {
+            guard uatLoopEnabled else {
+                NSLog("MANZO Phase 3: queue exhausted (\(currentTrackIndex)/\(trackQueue.count)) — stopping poll timer")
+                pollTimer?.invalidate()
+                pollTimer = nil
+                return
+            }
+            NSLog("MANZO UAT-0: queue exhausted — looping from track 0")
+            currentTrackIndex = 0
         }
 
         let nextPath = trackQueue[currentTrackIndex]
@@ -138,11 +142,13 @@ import AppKit
     // Remove this entire section (and the two call-sites below) after UAT is confirmed.
 
     private var uatKeyMonitor: Any?
+    private var uatLoopEnabled = false
 
     private func installUATKeyHandlers() {
         uatKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             switch event.charactersIgnoringModifiers {
+            case "0": self.uatToggleLoop();    return nil
             case "1": self.uatEQBoostBands();  return nil
             case "2": self.uatPreampBoost();   return nil
             case "3": self.uatVolumeFade();    return nil
@@ -150,7 +156,7 @@ import AppKit
             default:  return event
             }
         }
-        NSLog("MANZO UAT: key handlers active — 1=EQ boost, 2=preamp +12dB, 3=vol fade, 4=pan sweep")
+        NSLog("MANZO UAT: key handlers active — 0=loop, 1=EQ boost, 2=preamp +12dB, 3=vol fade, 4=pan sweep")
     }
 
     private func removeUATKeyHandlers() {
@@ -158,6 +164,12 @@ import AppKit
             NSEvent.removeMonitor(monitor)
             uatKeyMonitor = nil
         }
+    }
+
+    /// UAT-0: toggle continuous loop — restarts queue from track 0 when exhausted.
+    private func uatToggleLoop() {
+        uatLoopEnabled.toggle()
+        NSLog("MANZO UAT-0: loop \(uatLoopEnabled ? "ON" : "OFF")")
     }
 
     /// UAT-1: boost bands 0 (70 Hz) and 9 (16 kHz) to +12 dB; all other bands at 0 dB.
