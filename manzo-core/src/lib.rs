@@ -3,6 +3,7 @@
 //! Phase 2: Real MP3 decode + CoreAudio output pipeline
 
 pub(crate) mod eq10;
+use eq10::{Eq10State, eq10_processf, eq10_db2gain};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
@@ -28,11 +29,26 @@ struct InnerState {
     sample_rate: u32,
     channels: u16,
     is_playing: bool,
-    // Phase 4 DSP fields — stored now, wired into DSP chain in Phase 4
+    // Phase 4 DSP fields
     volume: f32,
     pan: f32,
     eq_gains: [f32; 10],
     eq_preamp: f32,
+    // Phase 4: pre-converted preamp scalar (avoids powf in audio callback hot path)
+    preamp_gain_linear: f32,
+    // Phase 4: per-channel biquad EQ state (one Eq10State per channel, per D-06)
+    eq_l: Eq10State,
+    eq_r: Eq10State,
+    // Phase 4: dynamic limiter toggle; default true per D-04
+    config_eq_limiter: bool,
+    // Phase 4: volume ramp state (D-03) — target written by manzo_set_volume
+    target_volume: f32,
+    current_volume: f32,
+    vol_ramp_remaining: u32,
+    // Phase 4: pan ramp state (D-03) — target written by manzo_set_pan
+    target_pan: f32,
+    current_pan: f32,
+    pan_ramp_remaining: u32,
     // Phase 3 (D-02): playback state for manzo_get_state()
     //   1 = PLAYING, 2 = PAUSED, 3 = STOPPED, 4 = ENDED
     playback_state: i32,
@@ -177,6 +193,16 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         pan: 0.0,
         eq_gains: [0.0; 10],
         eq_preamp: 0.0,
+        preamp_gain_linear: 1.0_f32,           // 0 dB = unity gain
+        eq_l: Eq10State::new(44100.0),         // 44.1 kHz — matches sample_rate field above
+        eq_r: Eq10State::new(44100.0),
+        config_eq_limiter: true,               // dynamic limiter enabled by default (D-04)
+        target_volume: 1.0,
+        current_volume: 1.0,
+        vol_ramp_remaining: 0,
+        target_pan: 0.0,
+        current_pan: 0.0,
+        pan_ramp_remaining: 0,
         playback_state: 3,           // STOPPED — D-02; no track playing on fresh open
         startup_skip_remaining: 529, // D-04: trim mpg123 decoder delay on first decode
         total_samples,               // D-03: cached at open time via secondary file-API probe
