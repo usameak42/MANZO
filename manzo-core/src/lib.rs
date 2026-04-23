@@ -30,8 +30,6 @@ struct InnerState {
     channels: u16,
     is_playing: bool,
     // Phase 4 DSP fields
-    volume: f32,
-    pan: f32,
     eq_gains: [f32; 10],
     eq_preamp: f32,
     // Phase 4: pre-converted preamp scalar (avoids powf in audio callback hot path)
@@ -189,8 +187,6 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         sample_rate: 44100,
         channels: 2,
         is_playing: false,
-        volume: 1.0,
-        pan: 0.0,
         eq_gains: [0.0; 10],
         eq_preamp: 0.0,
         preamp_gain_linear: 1.0_f32,           // 0 dB = unity gain
@@ -380,6 +376,56 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                     break;
                 }
             }
+
+            // ── Phase 4 DSP chain (D-01) ─────────────────────────────────────────
+            // Chain: preamp → EQ L (idx=0) → EQ R (idx=1) → vol/pan ramp
+            // WR-03: mutex is held for this entire block (Phase 5 will restructure locking)
+
+            // 1. Preamp: scalar multiply on entire interleaved buffer before EQ (D-01)
+            //    Pre-converted in manzo_set_eq to avoid powf here (Pitfall 6 / RESEARCH.md)
+            let preamp = s.preamp_gain_linear;
+            if preamp != 1.0_f32 {
+                for sample in data.iter_mut() {
+                    *sample *= preamp;
+                }
+            }
+
+            // 2 & 3. EQ per channel + dynamic limiter (D-06: called twice, L then R)
+            //    sz = FRAMES not samples (Pitfall 5); channels is always 2 for stereo MP3
+            //    Copy config_eq_limiter (bool: Copy) before mutable borrows of eq_l/eq_r
+            let num_frames = data.len() / s.channels as usize;
+            let limiter = s.config_eq_limiter;
+            eq10_processf(&mut s.eq_l, data, num_frames, 0, 2, limiter);  // L
+            eq10_processf(&mut s.eq_r, data, num_frames, 1, 2, limiter);  // R
+
+            // 4. Volume/pan linear ramp per frame (D-03; ~10 ms ramp at 44.1 kHz)
+            //    Linear pan law: L_gain = (1-pan).clamp(0,1), R_gain = (1+pan).clamp(0,1)
+            //    Assumption A1: linear split (not constant-power); Phase 5 can upgrade.
+            for frame in 0..num_frames {
+                // Advance volume ramp
+                if s.vol_ramp_remaining > 0 {
+                    let step = (s.target_volume - s.current_volume) / s.vol_ramp_remaining as f32;
+                    s.current_volume += step;
+                    s.vol_ramp_remaining -= 1;
+                } else {
+                    s.current_volume = s.target_volume;
+                }
+                // Advance pan ramp
+                if s.pan_ramp_remaining > 0 {
+                    let step = (s.target_pan - s.current_pan) / s.pan_ramp_remaining as f32;
+                    s.current_pan += step;
+                    s.pan_ramp_remaining -= 1;
+                } else {
+                    s.current_pan = s.target_pan;
+                }
+                let l_gain = (1.0 - s.current_pan).clamp(0.0, 1.0);
+                let r_gain = (1.0 + s.current_pan).clamp(0.0, 1.0);
+                let l = frame * 2;
+                let r = frame * 2 + 1;
+                data[l] *= s.current_volume * l_gain;
+                data[r] *= s.current_volume * r_gain;
+            }
+            // ── End Phase 4 DSP chain ─────────────────────────────────────────────
         },
         |err| eprintln!("cpal stream error: {err}"),
         None,
@@ -531,13 +577,18 @@ pub extern "C" fn manzo_set_eq(
     let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
     // SAFETY: caller guarantees gains points to at least 10 f32 values per the API contract
     let gain_slice = unsafe { std::slice::from_raw_parts(gains, 10) };
-    // Clamp to documented ±12.0 dB range; clamp also maps NaN to the boundary value,
-    // preventing NaN/Inf from propagating into the Phase 4 biquad DSP chain.
-    for (dst, &src) in state.eq_gains.iter_mut().zip(gain_slice.iter()) {
-        *dst = src.clamp(-12.0_f32, 12.0_f32);
+    // Collect clamped dB values first to avoid holding iter_mut borrow across eq_l/eq_r access
+    let clamped: [f32; 10] = std::array::from_fn(|i| gain_slice[i].clamp(-12.0_f32, 12.0_f32));
+    for (i, clamped_db) in clamped.iter().enumerate() {
+        state.eq_gains[i] = *clamped_db;
+        // D-05: shifted-linear gain; 0 dB → 0.0, +12 dB → ≈2.981, -12 dB → ≈-0.749
+        let gain_linear = eq10_db2gain(*clamped_db as f64);
+        state.eq_l.band[i].gain = gain_linear;
+        state.eq_r.band[i].gain = gain_linear;
     }
+    // D-03: preamp stored as dB for record; pre-converted to linear for hot path (Pitfall 6)
     state.eq_preamp = preamp.clamp(-12.0_f32, 12.0_f32);
-    // Phase 4 wires these into the DSP chain
+    state.preamp_gain_linear = 10_f32.powf(state.eq_preamp / 20.0);
 }
 
 /// Sets master volume. `volume` is in range [0.0, 1.0].
@@ -549,8 +600,9 @@ pub extern "C" fn manzo_set_volume(handle: *mut ManzoHandle, volume: f32) {
     }
     let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
     let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
-    state.volume = volume;
-    // Phase 4 wires into the DSP chain
+    // D-03: write target and reset ramp counter; audio callback linearly interpolates
+    state.target_volume = volume.clamp(0.0_f32, 1.0_f32);
+    state.vol_ramp_remaining = 441;  // ~10 ms at 44.1 kHz (D-03)
 }
 
 /// Sets stereo pan. `pan` is in range [-1.0, 1.0]; 0.0 = center.
@@ -562,8 +614,9 @@ pub extern "C" fn manzo_set_pan(handle: *mut ManzoHandle, pan: f32) {
     }
     let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
     let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
-    state.pan = pan;
-    // Phase 4 wires into the DSP chain
+    // D-03: write target and reset ramp counter; audio callback linearly interpolates
+    state.target_pan = pan.clamp(-1.0_f32, 1.0_f32);
+    state.pan_ramp_remaining = 441;  // ~10 ms at 44.1 kHz (D-03)
 }
 
 /// Returns the current playback position in milliseconds.
