@@ -10,6 +10,7 @@
 		2CF6D15A8144F531EB7427E4 /* ManzoWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB24B5754794121E0EF03F74 /* ManzoWindow.swift */; };
 		3DAF208BD04B15043D2BEECF /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D72C417C7828CF419FE9EAB8 /* main.swift */; };
 		48ACB43B09990F927D118BB8 /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */; };
+		4A30B488419E416CDDA65738 /* ManzoVisualStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */; };
 		56D6897176EC8070696391FD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB29267B5851BABE6CA438B /* AppDelegate.swift */; };
 		5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */; };
 		B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */; };
@@ -20,6 +21,7 @@
 		1EB5F2C7136193BE0BC04FAB /* ManzoApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ManzoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoVisualStyle.swift; sourceTree = "<group>"; };
 		8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ManzoApp-Bridging-Header.h"; sourceTree = "<group>"; };
 		D72C417C7828CF419FE9EAB8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -70,6 +72,7 @@
 				D72C417C7828CF419FE9EAB8 /* main.swift */,
 				C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */,
 				EEFAB0F804C124176548400A /* ManzoRootView.swift */,
+				8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */,
 				EB24B5754794121E0EF03F74 /* ManzoWindow.swift */,
 			);
 			path = ManzoApp;
@@ -164,6 +167,7 @@
 			files = (
 				56D6897176EC8070696391FD /* AppDelegate.swift in Sources */,
 				BB8CFD76611D53169E6CFAF5 /* ManzoRootView.swift in Sources */,
+				4A30B488419E416CDDA65738 /* ManzoVisualStyle.swift in Sources */,
 				2CF6D15A8144F531EB7427E4 /* ManzoWindow.swift in Sources */,
 				3DAF208BD04B15043D2BEECF /* main.swift in Sources */,
 			);
