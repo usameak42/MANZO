@@ -8,6 +8,8 @@ use eq10::{Eq10State, eq10_processf, eq10_db2gain};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 use std::ffi::CStr;
+use rustfft::{FftPlanner, num_complex::Complex};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Opaque handle returned by manzo_open and passed to all subsequent calls.
 /// The real state lives behind a raw pointer cast to Arc<Mutex<InnerState>>.
@@ -39,6 +41,19 @@ struct InnerState {
     eq_r: Eq10State,
     // Phase 4: dynamic limiter toggle; default true per D-04
     config_eq_limiter: bool,
+    // Phase 7: FFT pipeline (D-07, D-10)
+    // Circular sample buffer: stores the last 1024 decoded float32 mono-downmixed samples.
+    // The audio callback fills this ring buffer; FFT reads the last 1024 samples every 512 new samples.
+    fft_sample_buf: [f32; 1024],
+    fft_sample_pos: usize,       // write position in fft_sample_buf (0..1023, wraps)
+    fft_samples_since_last: usize, // count of new samples since last FFT run; FFT fires every 512
+
+    // Double-buffer for 75 bar magnitudes (D-10).
+    // Audio callback writes into fft_bufs[fft_write_idx]; then atomically publishes fft_read_idx.
+    // manzo_get_spectrum reads fft_bufs[fft_read_idx.load(Relaxed)] via try_lock (Option A, D-10).
+    fft_bufs: [[f32; 75]; 2],
+    fft_write_idx: usize,        // which slot the callback is writing (0 or 1); not atomic — callback-only
+    fft_read_idx: AtomicUsize, // atomically published after each FFT run
     // Phase 4: volume ramp state (D-03) — target written by manzo_set_volume
     target_volume: f32,
     current_volume: f32,
@@ -193,6 +208,12 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         eq_l: Eq10State::new(44100.0),         // 44.1 kHz — matches sample_rate field above
         eq_r: Eq10State::new(44100.0),
         config_eq_limiter: true,               // dynamic limiter enabled by default (D-04)
+        fft_sample_buf: [0.0f32; 1024],
+        fft_sample_pos: 0,
+        fft_samples_since_last: 0,
+        fft_bufs: [[0.0f32; 75]; 2],
+        fft_write_idx: 0,
+        fft_read_idx: AtomicUsize::new(0),
         target_volume: 1.0,
         current_volume: 1.0,
         vol_ramp_remaining: 0,
