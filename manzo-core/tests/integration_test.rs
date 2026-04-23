@@ -12,7 +12,9 @@ use manzo_core::{
     manzo_close, manzo_get_duration, manzo_get_position, manzo_get_spectrum,
     manzo_get_state, manzo_open, manzo_pause, manzo_play, manzo_stop,
 };
+use manzo_core::eq10::{Eq10State, eq10_processf, eq10_db2gain};
 use std::ffi::CString;
+use std::time::Instant;
 
 /// Path to the CC0 test fixture, resolved at compile time.
 const FIXTURE_PATH: &str =
@@ -217,4 +219,57 @@ fn state_becomes_ended_after_short_track_completes() {
     );
 
     unsafe { manzo_close(handle) };
+}
+
+/// D-07: EQ processing must stay under 100 µs per 1024-sample stereo buffer on M1.
+/// Mirrors eq10dsp.cpp TESTCASE stress loop with a timing gate.
+/// NOT marked #[ignore] — runs unconditionally; requires no audio hardware.
+#[test]
+fn eq_perf_under_100us() {
+    let mut eq_l = Eq10State::new(44100.0);
+    let mut eq_r = Eq10State::new(44100.0);
+
+    // Set all bands to max boost so the 10-band hot path is exercised.
+    // Pitfall 2: at 0 dB all bands have gain=0.0 → a0=0.0 → all bands skipped.
+    // This test MUST use non-zero gain to measure actual DSP cost.
+    let max_boost = eq10_db2gain(12.0);
+    for band in eq_l.band.iter_mut().chain(eq_r.band.iter_mut()) {
+        band.gain = max_boost;
+    }
+
+    // 1024 frames × 2 channels interleaved = 2048 f32 samples
+    let mut buf = vec![0.5_f32; 1024 * 2];
+
+    // Warm up: 10 untimed iterations to prime CPU caches and branch predictor.
+    // Without warmup the first iteration includes cold-cache overhead that is not
+    // representative of steady-state EQ processing cost (T-04-11).
+    for _ in 0..10 {
+        eq10_processf(&mut eq_l, &mut buf, 1024, 0, 2, true);
+        eq10_processf(&mut eq_r, &mut buf, 1024, 1, 2, true);
+    }
+
+    let mut timings = Vec::with_capacity(1000);
+    for _ in 0..1000 {
+        let t0 = Instant::now();
+        // D-06: processf called twice per buffer — L channel (idx=0) then R (idx=1)
+        eq10_processf(&mut eq_l, &mut buf, 1024, 0, 2, true);
+        eq10_processf(&mut eq_r, &mut buf, 1024, 1, 2, true);
+        timings.push(t0.elapsed().as_micros());
+    }
+
+    // Use 99th-percentile instead of max to avoid false failures from OS scheduling
+    // jitter (T-04-11: single preemption can spike one iteration by 100+ µs on any OS).
+    // The 99th percentile over 1000 iterations means at most 10 outlier iterations
+    // are excluded — all true EQ-cost iterations must still be under 100 µs.
+    timings.sort_unstable();
+    let p99_elapsed_us = timings[989]; // index 989 = 99th percentile of 1000 samples
+    let max_elapsed_us = *timings.last().unwrap();
+
+    assert!(
+        p99_elapsed_us < 100,
+        "EQ processing exceeded 100 µs budget at p99 (DSP-01 / D-07): \
+         p99 was {} µs, max was {} µs over 1000 iterations of 1024-frame stereo processing",
+        p99_elapsed_us,
+        max_elapsed_us
+    );
 }
