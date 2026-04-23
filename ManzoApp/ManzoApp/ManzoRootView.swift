@@ -48,11 +48,13 @@ class ManzoRootView: NSVisualEffectView {
         blendingMode = .behindWindow
         state        = .active
         wantsLayer   = true
-        layer?.cornerRadius = 0   // D-07: rectangular in Phase 5; Phase 6 may add corner radius
+        layer?.cornerRadius = 10   // D-01: glass-bubble look, updated from 0 in Phase 6
+        layer?.masksToBounds = true  // clip sublayers to rounded rect
 
         setupPanels()
 
         NSLog("MANZO Phase 5: ManzoRootView initialized — material=%@, blendingMode=behindWindow", "\(material.rawValue)")
+        NSLog("MANZO Phase 6: ManzoRootView ready — applyStyle() awaits AppDelegate call, cornerRadius=10")
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) not used — code-only UI") }
@@ -95,6 +97,113 @@ class ManzoRootView: NSVisualEffectView {
         ])
 
         NSLog("MANZO Phase 5: panels constrained — titleView 14pt / bodyView 88pt / statusView 14pt")
+    }
+
+    // MARK: - Phase 6: Neo-Aero Style Application (D-10)
+
+    // Called by AppDelegate after window setup, and again when ManzoVisualStyle changes.
+    // Removes existing NeoAeroContainer sublayers from all insertion points,
+    // inserts fresh layers from NeoAeroLayerFactory per the new style.
+    func applyStyle(_ style: ManzoVisualStyle) {
+        // Remove old NeoAero layers from all possible insertion points.
+        // Factory tags container layers with name "NeoAeroContainer" (via setValue:forKey:).
+        removeNeoAeroLayers(from: layer)
+        removeNeoAeroLayers(from: titleView.layer)
+        removeNeoAeroLayers(from: bodyView.layer)
+        removeNeoAeroLayers(from: statusView.layer)
+
+        // Remove existing CAReplicatorLayer wet-floor (D-07: remove, not hide).
+        layer?.sublayers?.filter { $0 is CAReplicatorLayer }.forEach { $0.removeFromSuperlayer() }
+
+        // Insert Neo-Aero layers based on PanelLayout (D-03).
+        switch style.panelLayout {
+        case .unifiedSlab:
+            // Single glass slab spanning full 275×116 root view.
+            // Inserted at index 0 so panel NSViews (titleView, bodyView, statusView) remain on top for hit-testing.
+            let slab = NeoAeroLayerFactory.make(style: style, bounds: bounds)
+            layer?.insertSublayer(slab, at: 0)
+
+        case .threeBubbles:
+            // One independent r=10 container per panel view.
+            let titleLayer  = NeoAeroLayerFactory.make(style: style, bounds: titleView.bounds)
+            let bodyLayer   = NeoAeroLayerFactory.make(style: style, bounds: bodyView.bounds)
+            let statusLayer = NeoAeroLayerFactory.make(style: style, bounds: statusView.bounds)
+            titleView.layer?.insertSublayer(titleLayer,  at: 0)
+            bodyView.layer?.insertSublayer(bodyLayer,    at: 0)
+            statusView.layer?.insertSublayer(statusLayer, at: 0)
+
+        case .bodyFocus:
+            // bodyView: full 5-layer stack (r=10).
+            // titleView/statusView: simplified base+rim only (cornerRadius=0).
+            let bodyLayer    = NeoAeroLayerFactory.make(style: style, bounds: bodyView.bounds)
+            let titleSimple  = NeoAeroLayerFactory.makeSimplified(style: style, bounds: titleView.bounds)
+            let statusSimple = NeoAeroLayerFactory.makeSimplified(style: style, bounds: statusView.bounds)
+            bodyView.layer?.insertSublayer(bodyLayer,     at: 0)
+            titleView.layer?.insertSublayer(titleSimple,  at: 0)
+            statusView.layer?.insertSublayer(statusSimple, at: 0)
+        }
+
+        // Wire wet-floor CAReplicatorLayer if enabled (D-06, D-07).
+        if style.wetFloor {
+            let kWindowHeight: CGFloat = 116
+            let kWindowWidth:  CGFloat = 275
+
+            let replicator = CAReplicatorLayer()
+            replicator.instanceCount = 2
+            replicator.instanceTransform = CATransform3D(
+                m11: 1, m12: 0, m13: 0, m14: 0,
+                m21: 0, m22: -1, m23: 0, m24: 0,   // Y-flip
+                m31: 0, m32: 0, m33:  1, m34: 0,
+                m41: 0, m42: kWindowHeight * 2, m43: 0, m44: 1
+            )
+            replicator.instanceAlphaOffset = -0.5   // 50% opacity reflection (D-06)
+
+            let reflectionHeight: CGFloat = kWindowHeight * 0.5
+            let reflectionRect = CGRect(x: 0, y: -reflectionHeight, width: kWindowWidth, height: reflectionHeight)
+            let fadeMask = CAGradientLayer()
+            fadeMask.colors = [
+                CGColor(gray: 0, alpha: 1.0),  // opaque at top of reflection
+                CGColor(gray: 0, alpha: 0.0)   // transparent at bottom
+            ]
+            fadeMask.frame = reflectionRect
+            replicator.mask = fadeMask
+
+            // Insert at index 0 — below Neo-Aero chrome and panel views.
+            layer?.insertSublayer(replicator, at: 0)
+            NSLog("MANZO Phase 6: ManzoRootView.applyStyle — wet-floor CAReplicatorLayer inserted")
+        }
+
+        NSLog("MANZO Phase 6: ManzoRootView.applyStyle — layout=%@, theme=%@, wetFloor=%d",
+              style.panelLayout.rawValue, style.colorTheme.rawValue, style.wetFloor ? 1 : 0)
+    }
+
+    // Removes all sublayers whose "name" key equals "NeoAeroContainer".
+    // This is the factory-set tag used to identify layers owned by NeoAeroLayerFactory.
+    private func removeNeoAeroLayers(from layer: CALayer?) {
+        guard let layer = layer else { return }
+        let toRemove = layer.sublayers?.filter {
+            ($0.value(forKey: "name") as? String) == "NeoAeroContainer"
+        } ?? []
+        toRemove.forEach { $0.removeFromSuperlayer() }
+    }
+
+    // Invalidates rasterization cache on all NeoAeroContainer layers.
+    // Call ONLY on actual visual state changes (theme switch, layout switch, drag-end).
+    // NEVER call per-frame. (D-08)
+    func invalidateNeoAeroRasterization() {
+        func invalidate(_ layer: CALayer?) {
+            layer?.sublayers?.forEach { sub in
+                if (sub.value(forKey: "name") as? String) == "NeoAeroContainer" {
+                    sub.shouldRasterize = false
+                    sub.shouldRasterize = true
+                    sub.rasterizationScale = 2.0
+                }
+            }
+        }
+        invalidate(layer)
+        invalidate(titleView.layer)
+        invalidate(bodyView.layer)
+        invalidate(statusView.layer)
     }
 
     // MARK: - Drag
