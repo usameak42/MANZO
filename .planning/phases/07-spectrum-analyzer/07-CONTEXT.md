@@ -36,7 +36,7 @@ renders 75 spectrum bars with SDF bloom and Winamp-canonical colors (P3-upgraded
 ## Implementation Decisions
 
 ### Spectrum Panel Placement
-- **D-01:** MTKView dimensions: **~150×32 pt** (2pt/bar × 75 bars + gaps ≈ 149 pt wide;
+- **D-01:** MTKView dimensions: **225×32 pt** (75 bars × 3 pt/bar = 225 pt wide per D-03;
   32 pt tall — exact Winamp singlesize specData 76×16 px at 2× scale).
   Positioned: **center-horizontally, bottom-anchored** in `bodyView` (275×88 pt).
   Implemented as a subview of `bodyView` — NOT a sibling — so Auto Layout constraints
