@@ -168,7 +168,12 @@ Plans:
 3. The Metal fragment shader applies SDF single-pass bloom: bar quads extend by 3σ and compute analytical Gaussian glow per fragment; the result shows a visible neon-glow halo around active bars.
 4. The render loop is driven by `CADisplayLink` on a dedicated background thread; the main thread is never blocked by Metal draw calls.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Rust FFT pipeline: rustfft dependency, InnerState FFT fields, audio callback computation, live manzo_get_spectrum
+- [ ] 07-02-PLAN.md — Metal renderer: ManzoSpectrumView MTKView, Spectrum.metal SDF bloom shaders, project.yml Metal frameworks
+- [ ] 07-03-PLAN.md — Integration: wire into ManzoRootView/AppDelegate, NeoAeroContainer chrome mask, build + visual verification
 
 ---
 
