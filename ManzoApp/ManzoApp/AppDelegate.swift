@@ -65,13 +65,9 @@ import AppKit
             repeats: true
         )
         NSLog("MANZO Phase 3: 100 ms state poll timer armed — queue size \(trackQueue.count)")
-
-        installUATKeyHandlers()  // Phase 4 UAT — remove after confirmed
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        removeUATKeyHandlers()  // Phase 4 UAT — remove after confirmed
-
         // Phase 3: stop the poll timer FIRST so it cannot fire after the handle is freed.
         pollTimer?.invalidate()
         pollTimer = nil
@@ -105,17 +101,13 @@ import AppKit
         manzo_close(handle)
         manzoHandle = nil
 
-        // Advance the queue cursor; wrap around when UAT loop mode is active.
+        // Advance the queue cursor.
         currentTrackIndex += 1
-        if currentTrackIndex >= trackQueue.count {
-            guard uatLoopEnabled else {
-                NSLog("MANZO Phase 3: queue exhausted (\(currentTrackIndex)/\(trackQueue.count)) — stopping poll timer")
-                pollTimer?.invalidate()
-                pollTimer = nil
-                return
-            }
-            NSLog("MANZO UAT-0: queue exhausted — looping from track 0")
-            currentTrackIndex = 0
+        guard currentTrackIndex < trackQueue.count else {
+            NSLog("MANZO Phase 3: queue exhausted (\(currentTrackIndex)/\(trackQueue.count)) — stopping poll timer")
+            pollTimer?.invalidate()
+            pollTimer = nil
+            return
         }
 
         let nextPath = trackQueue[currentTrackIndex]
@@ -135,88 +127,6 @@ import AppKit
         }
         let playResult = manzo_play(nextHandle)
         NSLog("MANZO Phase 3: auto-advance to \(nextPath) — play result: \(playResult)")
-    }
-
-    // MARK: - Phase 4 UAT: temporary debug key handlers
-    // Press 1–4 during playback to trigger the 4 UAT scenarios.
-    // Remove this entire section (and the two call-sites below) after UAT is confirmed.
-
-    private var uatKeyMonitor: Any?
-    private var uatLoopEnabled = false
-
-    private func installUATKeyHandlers() {
-        uatKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return event }
-            switch event.charactersIgnoringModifiers {
-            case "0": self.uatToggleLoop();    return nil
-            case "1": self.uatEQBoostBands();  return nil
-            case "2": self.uatPreampBoost();   return nil
-            case "3": self.uatVolumeFade();    return nil
-            case "4": self.uatPanSweep();      return nil
-            default:  return event
-            }
-        }
-        NSLog("MANZO UAT: key handlers active — 0=loop, 1=EQ boost, 2=preamp +12dB, 3=vol fade, 4=pan sweep")
-    }
-
-    private func removeUATKeyHandlers() {
-        if let monitor = uatKeyMonitor {
-            NSEvent.removeMonitor(monitor)
-            uatKeyMonitor = nil
-        }
-    }
-
-    /// UAT-0: toggle continuous loop — restarts queue from track 0 when exhausted.
-    private func uatToggleLoop() {
-        uatLoopEnabled.toggle()
-        NSLog("MANZO UAT-0: loop \(uatLoopEnabled ? "ON" : "OFF")")
-    }
-
-    /// UAT-1: boost bands 0 (70 Hz) and 9 (16 kHz) to +12 dB; all other bands at 0 dB.
-    private func uatEQBoostBands() {
-        guard let handle = manzoHandle else { NSLog("MANZO UAT-1: no handle"); return }
-        var gains = [Float](repeating: 0, count: 10)
-        gains[0] = 12.0
-        gains[9] = 12.0
-        gains.withUnsafeBufferPointer { manzo_set_eq(handle, $0.baseAddress!, 0.0) }
-        NSLog("MANZO UAT-1: bands 0+9 → +12 dB (preamp 0 dB)")
-    }
-
-    /// UAT-2: set preamp to +12 dB; all bands at 0 dB.
-    private func uatPreampBoost() {
-        guard let handle = manzoHandle else { NSLog("MANZO UAT-2: no handle"); return }
-        let gains = [Float](repeating: 0, count: 10)
-        gains.withUnsafeBufferPointer { manzo_set_eq(handle, $0.baseAddress!, 12.0) }
-        NSLog("MANZO UAT-2: preamp → +12 dB")
-    }
-
-    /// UAT-3: fade volume to 0 then restore to 1 after 500 ms.
-    private func uatVolumeFade() {
-        guard let handle = manzoHandle else { NSLog("MANZO UAT-3: no handle"); return }
-        manzo_set_volume(handle, 0.0)
-        NSLog("MANZO UAT-3: volume → 0.0, restoring in 500 ms")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            guard let h = self?.manzoHandle else { return }
-            manzo_set_volume(h, 1.0)
-            NSLog("MANZO UAT-3: volume → 1.0")
-        }
-    }
-
-    /// UAT-4: pan sweep −1.0 → 0.0 → +1.0, 400 ms between steps.
-    private func uatPanSweep() {
-        guard let handle = manzoHandle else { NSLog("MANZO UAT-4: no handle"); return }
-        manzo_set_pan(handle, -1.0)
-        NSLog("MANZO UAT-4: pan → -1.0 (hard left)")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-            guard let h = self?.manzoHandle else { return }
-            manzo_set_pan(h, 0.0)
-            NSLog("MANZO UAT-4: pan → 0.0 (center)")
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            guard let h = self?.manzoHandle else { return }
-            manzo_set_pan(h, 1.0)
-            NSLog("MANZO UAT-4: pan → +1.0 (hard right)")
-        }
     }
 
     // MARK: - Helpers

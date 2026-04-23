@@ -87,6 +87,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ### Open Questions
 
 - macOS 26 SDK Liquid Glass AppKit API name — resolve in Phase 5
+- EQ band boost via manzo_set_eq (DSP-02) NOT fully verified with real audio — UAT key 1 fired during playback but no MP3 with rich frequency content was available to hear the effect clearly. Re-test in Phase 8/9 when playlist has real user-selected files.
 
 ---
 
