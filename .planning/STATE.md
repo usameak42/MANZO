@@ -76,8 +76,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ### Known Constraints
 
-- Liquid Glass AppKit material name unconfirmed — needs macOS 26 SDK prototype on Phase 5 day one (30-min Xcode experiment)
-- Fallback: `NSHostingView` wrapping SwiftUI `.glassEffect()` if AppKit API not available; gate with `#available(macOS 26, *)`
+- Liquid Glass AppKit material name unconfirmed — Phase 5 uses `ManzoGlassMaterial` named constant; update in one place when macOS 26 SDK confirms the case name. No Sequoia fallback — macOS 26 minimum.
 - MTKView does NOT auto-configure P3 — `CAMetalLayer.colorspace` must be set explicitly (Phase 7)
 - Two `.behindWindow` NSVisualEffectView in one window = double-blur artifact — enforce one-per-window rule (Phase 5)
 - `isOpaque = false` must be set on NSWindow before `orderFront`; changing after causes compositor hiccup
@@ -109,4 +108,5 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 2026-04-20 — Phase 1 complete: Rust staticlib + cbindgen FFI bridge + Xcode wiring verified
 2026-04-22 — Phase 2 complete: mpg123-sys + cpal float32 pipeline; audible playback confirmed
 2026-04-22 — Phase 3 complete: playback state machine, gapless 529-sample trim (divisor fixed), Swift auto-advance; UAT 5/5 passed; code review fixes applied (WR-01–04)
+2026-04-23 — Phase 5 context gathered: frameless 275×116 NSWindow, ManzoGlassMaterial constant, named panel NSViews (titleView/bodyView/statusView), mouseDown drag pattern
 2026-04-23 — Phase 4 complete: eq10dsp.cpp Rust port, 5-stage DSP chain wired into cpal callback, perf gate passes; EQ band boost deferred re-test to Phase 8/9
