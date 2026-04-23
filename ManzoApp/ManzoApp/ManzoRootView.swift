@@ -38,6 +38,9 @@ class ManzoRootView: NSVisualEffectView {
     let bodyView   = NSView()
     let statusView = NSView()
 
+    // Phase 7: retained spectrum MTKView — added as subview of bodyView after applyStyle().
+    private(set) var spectrumView: ManzoSpectrumView? = nil
+
     // Designated initializer.
     // D-07: configure vibrancy material, blending mode, state, layer settings.
     override init(frame: NSRect) {
@@ -175,6 +178,53 @@ class ManzoRootView: NSVisualEffectView {
 
         NSLog("MANZO Phase 6: ManzoRootView.applyStyle — layout=%@, theme=%@, wetFloor=%d",
               style.panelLayout.rawValue, style.colorTheme.rawValue, style.wetFloor ? 1 : 0)
+    }
+
+    // MARK: - Phase 7: Spectrum View Integration (D-01, D-02)
+
+    func addSpectrumView(_ view: ManzoSpectrumView) {
+        spectrumView?.removeFromSuperview()
+        spectrumView = view
+
+        view.translatesAutoresizingMaskIntoConstraints = false
+        bodyView.addSubview(view)
+
+        // D-01: 225×32 pt, centered horizontally, bottom-anchored in bodyView.
+        NSLayoutConstraint.activate([
+            view.widthAnchor.constraint(equalToConstant: 225),
+            view.heightAnchor.constraint(equalToConstant: 32),
+            view.centerXAnchor.constraint(equalTo: bodyView.centerXAnchor),
+            view.bottomAnchor.constraint(equalTo: bodyView.bottomAnchor),
+        ])
+
+        bodyView.layoutSubtreeIfNeeded()
+        applySpectrumChromeMask(spectrumFrame: view.frame)
+
+        NSLog("MANZO Phase 7: ManzoSpectrumView added — frame=%@, bodyView=%@",
+              NSStringFromRect(view.frame), NSStringFromRect(bodyView.bounds))
+    }
+
+    private func applySpectrumChromeMask(spectrumFrame: CGRect) {
+        guard let neoAeroLayer = bodyView.layer?.sublayers?.first(where: {
+            ($0.value(forKey: "name") as? String) == "NeoAeroContainer"
+        }) else {
+            NSLog("MANZO Phase 7: applySpectrumChromeMask — NeoAeroContainer not found; skipping mask")
+            return
+        }
+
+        // D-02: evenOdd punch-through — full bodyView rect minus spectrumView frame.
+        let maskPath = CGMutablePath()
+        maskPath.addRect(bodyView.bounds)
+        maskPath.addRect(spectrumFrame)
+
+        let maskLayer = CAShapeLayer()
+        maskLayer.path = maskPath
+        maskLayer.fillRule = .evenOdd
+        maskLayer.frame = bodyView.bounds
+        neoAeroLayer.mask = maskLayer
+
+        NSLog("MANZO Phase 7: NeoAeroContainer chrome mask applied — spectrumFrame=%@",
+              NSStringFromRect(spectrumFrame))
     }
 
     // Removes all sublayers whose "name" key equals "NeoAeroContainer".

@@ -31,6 +31,9 @@ import AppKit
     // AppDelegate owns the current style per D-10.
     private var visualStyle: ManzoVisualStyle = .default
 
+    // Phase 7: retained spectrum view — initialized in applicationDidFinishLaunching.
+    private var spectrumView: ManzoSpectrumView? = nil
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -60,6 +63,12 @@ import AppKit
                 let playResult = manzo_play(manzoHandle!)
                 if playResult == 0 {
                     NSLog("MANZO Phase 3: playback started — \(firstPath)")
+                    // Phase 7: wire handle to spectrum view and start render loop.
+                    if let sv = spectrumView {
+                        sv.manzoHandle = manzoHandle
+                        sv.startRenderLoop()
+                        NSLog("MANZO Phase 7: spectrum render loop started after successful manzo_play")
+                    }
                 } else {
                     NSLog("MANZO Phase 3: manzo_play failed with code \(playResult) — \(firstPath)")
                 }
@@ -100,12 +109,26 @@ import AppKit
         window.setFrameAutosaveName("ManzoMainWindow")
         manzoWindow = window   // retain: prevent ARC deallocation
         NSLog("MANZO Phase 5: window ordered front — 275×116 pt frameless, autosave=ManzoMainWindow")
+
+        // MARK: Phase 7 — Spectrum analyzer setup (CHK-02: after orderFront so bodyView has screen context)
+        let spectrum = ManzoSpectrumView()
+        rootView.addSpectrumView(spectrum)
+        spectrumView = spectrum
+        NSLog("MANZO Phase 7: ManzoSpectrumView created and added to bodyView")
+
+        if let handle = manzoHandle {
+            spectrum.manzoHandle = handle
+            spectrum.startRenderLoop()
+            NSLog("MANZO Phase 7: CADisplayLink render loop started — manzoHandle wired")
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         // Phase 3: stop the poll timer FIRST so it cannot fire after the handle is freed.
         pollTimer?.invalidate()
         pollTimer = nil
+        // Phase 7: stop render loop before releasing handle (loop reads handle).
+        spectrumView?.stopRenderLoop()
 
         // Release Rust handle on app exit — manzo_close drops the Arc and stops cpal stream (T-02-09).
         if let handle = manzoHandle {
