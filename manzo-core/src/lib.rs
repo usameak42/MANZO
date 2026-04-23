@@ -2,6 +2,8 @@
 //! FFI surface: 11 C-callable functions, generated header via cbindgen
 //! Phase 2: Real MP3 decode + CoreAudio output pipeline
 
+pub(crate) mod eq10;
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 use std::ffi::CStr;
