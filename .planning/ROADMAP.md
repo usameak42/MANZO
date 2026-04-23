@@ -14,7 +14,7 @@
 - [x] **Phase 3: Playback Controls** — Gapless playback, transport (play/pause/stop/seek), auto-advance
 - [x] **Phase 4: DSP Engine** — 10-band Rust EQ (eq10dsp.cpp port), volume, and pan controls
 - [x] **Phase 5: UI Shell** — Frameless NSWindow, single-root vibrancy, drag region, window persistence
-- [ ] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
+- [x] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
 - [ ] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
 - [ ] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
 - [ ] **Phase 9: Online Streaming** — yt-dlp sidecar bundle, URL streaming, quarantine strip
