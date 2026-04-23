@@ -27,7 +27,7 @@
 /// All fields are `f64` to match the original's `double` precision.
 /// `EQ10_DETECTOR_CODE` is NOT defined — detect/detectdecay per-band are omitted.
 #[derive(Clone, Copy)]
-pub(crate) struct Eq10Band {
+pub struct Eq10Band {
     pub gain: f64,   // shifted-linear; 0.0 == 0 dB (use eq10_db2gain to convert)
     pub ua0: f64,    // boost coefficient a0 (Q*2)
     pub ub1: f64,    // boost coefficient b1
@@ -59,7 +59,7 @@ impl Default for Eq10Band {
 ///
 /// IMPORTANT: Always construct with `Eq10State::new(rate)` — never zero-initialize.
 /// `detectdecay = 0.0` disables the limiter entirely (Pitfall 4).
-pub(crate) struct Eq10State {
+pub struct Eq10State {
     pub rate: f64,
     pub band: [Eq10Band; 10],
     pub detect: f64,       // global limiter peak tracker
@@ -79,7 +79,7 @@ impl Eq10State {
     /// Equivalent to `eq10_setup()` from eq10dsp.cpp lines 79-96.
     /// Computes biquad coefficients for all 10 bands at the Winamp frequency table.
     /// MUST be used instead of Default — detectdecay must be non-zero.
-    pub(crate) fn new(rate: f64) -> Self {
+    pub fn new(rate: f64) -> Self {
         let mut state = Eq10State {
             rate,
             band: std::array::from_fn(|_| Eq10Band::default()),
@@ -137,7 +137,7 @@ fn eq10_bsetup2(boost: bool, rate: f64, band: &mut Eq10Band, freq: f64, q: f64) 
 ///
 /// Direct Rust translation of `eq10_bsetup()` from eq10dsp.cpp lines 68-77.
 /// Resets all band fields to zero (C: memset), then computes cut and boost coefficients.
-pub(crate) fn eq10_bsetup(rate: f64, band: &mut Eq10Band, freq: f64, q: f64) {
+pub fn eq10_bsetup(rate: f64, band: &mut Eq10Band, freq: f64, q: f64) {
     // Source: eq10dsp.cpp line 70 — memset(band, 0, sizeof(*band)) equivalent
     *band = Eq10Band::default();
     // Source: eq10dsp.cpp line 71 — cut coefficients: Q*0.5
@@ -162,7 +162,7 @@ pub(crate) fn eq10_bsetup(rate: f64, band: &mut Eq10Band, freq: f64, q: f64) {
 /// - `idx`:              channel index (0 = left, 1 = right)
 /// - `step`:             channel count (2 for stereo)
 /// - `config_eq_limiter`: enable dynamic limiter (source: global config_eq_limiter)
-pub(crate) fn eq10_processf(
+pub fn eq10_processf(
     eq: &mut Eq10State,
     buf: &mut [f32],
     sz: usize,
@@ -246,14 +246,14 @@ pub(crate) fn eq10_processf(
 /// 0 dB → 0.0; +12 dB → ≈2.981; -12 dB → ≈-0.749.
 /// The shifted-linear form means `gain > 0.0` selects boost coefficients and
 /// `gain <= 0.0` selects cut coefficients in `eq10_processf`.
-pub(crate) fn eq10_db2gain(gain_db: f64) -> f64 {
+pub fn eq10_db2gain(gain_db: f64) -> f64 {
     10.0_f64.powf(gain_db / 20.0) - 1.0
 }
 
 /// Set a band's gain in dB.
 ///
 /// Direct Rust translation of the `eq10_setgain()` body from eq10dsp.cpp lines 219-231.
-pub(crate) fn eq10_setgain(band: &mut Eq10Band, db: f64) {
+pub fn eq10_setgain(band: &mut Eq10Band, db: f64) {
     band.gain = eq10_db2gain(db);
 }
 

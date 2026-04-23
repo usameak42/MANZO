@@ -2,7 +2,7 @@
 //! FFI surface: 11 C-callable functions, generated header via cbindgen
 //! Phase 2: Real MP3 decode + CoreAudio output pipeline
 
-pub(crate) mod eq10;
+pub mod eq10;
 use eq10::{Eq10State, eq10_processf, eq10_db2gain};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
