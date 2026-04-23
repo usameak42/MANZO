@@ -146,7 +146,12 @@ Plans:
 3. Every brand color (aqua, teal, rim) in the panel chrome is specified as `CGColor(colorSpace: .displayP3)` — no `NSColor(calibratedRed:...)` or sRGB fallbacks.
 4. Static panels have `shouldRasterize = true` and `rasterizationScale = 2.0`; GPU compositing time for 30+ static elements stays under 0.8 ms on M1.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — NeoAeroLayerFactory + ManzoVisualStyle data models (new files)
+- [ ] 06-02-PLAN.md — ManzoRootView.applyStyle() + wet-floor CAReplicatorLayer + cornerRadius=10
+- [ ] 06-03-PLAN.md — AppDelegate wiring + xcodebuild verify + visual checkpoint
 
 ---
 
