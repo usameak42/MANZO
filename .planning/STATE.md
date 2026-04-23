@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-04-24T00:00:00.000Z"
+status: in_progress
+last_updated: "2026-04-24T02:30:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 17
-  completed_plans: 14
-  percent: 82
+  total_plans: 20
+  completed_plans: 16
+  percent: 80
 ---
 
 # MANZO — Project State
@@ -19,7 +19,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** A tactile, skeuomorphic music player that sounds and looks like Winamp — running native on Apple Silicon, with glass chrome you can feel and DSP math bit-accurate to the original.
-**Current focus:** Phase 7 — Spectrum Analyzer
+**Current focus:** Phase 7 — Spectrum Analyzer (Wave 1 complete — 2/3 plans done, Wave 2 pending)
 
 ---
 
@@ -36,7 +36,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 | 4 | DSP Engine | Complete (3/3) | 3 |
 | 5 | UI Shell | Complete (2/2) | 2 |
 | 6 | Neo-Aero Visual Stack | Complete (3/3) | 3 |
-| 7 | Spectrum Analyzer | Not Started | 0 |
+| 7 | Spectrum Analyzer | In Progress (2/3) | 3 |
 | 8 | Playlist & Library | Not Started | 0 |
 | 9 | Online Streaming | Not Started | 0 |
 
@@ -111,3 +111,4 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 2026-04-23 — Phase 5 context gathered: frameless 275×116 NSWindow, ManzoGlassMaterial constant, named panel NSViews (titleView/bodyView/statusView), mouseDown drag pattern
 2026-04-23 — Phase 4 complete: eq10dsp.cpp Rust port, 5-stage DSP chain wired into cpal callback, perf gate passes; EQ band boost deferred re-test to Phase 8/9
 2026-04-24 — Phase 6 complete: NeoAeroLayerFactory + ManzoVisualStyle + applyStyle wired; 5-layer P3 chrome, CAReplicatorLayer wet-floor, rasterization; 2 visual UAT items pending human run
+2026-04-24 — Phase 7 Wave 1 complete: Rust FFT pipeline (rustfft 1024-pt, 75 bars, try_lock double-buffer) + Metal renderer (ManzoSpectrumView .rgba16Float+displayP3, Spectrum.metal SDF bloom, Winamp peak-hold)
