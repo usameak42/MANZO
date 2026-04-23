@@ -27,6 +27,10 @@ import AppKit
     // ARC would deallocate a window stored only in a local var on the next runloop cycle.
     private var manzoWindow: ManzoWindow? = nil
 
+    // Phase 6: retained ManzoVisualStyle — loaded from UserDefaults in applicationDidFinishLaunching.
+    // AppDelegate owns the current style per D-10.
+    private var visualStyle: ManzoVisualStyle = .default
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -74,12 +78,20 @@ import AppKit
             }
         }
 
-        // MARK: Phase 5 — window setup
-        // Window always appears regardless of audio fixture availability.
-        // D-04: isOpaque=false and backgroundColor=.clear are set inside ManzoWindow.init()
-        //        (before this call site), so they are already set before orderFront below.
-        let window = ManzoWindow()
+        // MARK: Phase 5 / Phase 6 — window setup + Neo-Aero style application
+        // D-04 (Phase 5): isOpaque=false and backgroundColor=.clear set inside ManzoWindow.init()
+        //                 before this call — already correct for compositor.
+        // D-10 (Phase 6): ManzoVisualStyle loaded and applied before contentView assignment.
+        let window   = ManzoWindow()
         let rootView = ManzoRootView(frame: window.frame)
+
+        // Phase 6 (D-10): load persisted style (or default on first launch) and apply Neo-Aero chrome.
+        visualStyle = ManzoVisualStyle.load()
+        rootView.applyStyle(visualStyle)
+        NSLog("MANZO Phase 6: ManzoVisualStyle loaded and applied — layout=%@, theme=%@, wetFloor=%d",
+              visualStyle.panelLayout.rawValue, visualStyle.colorTheme.rawValue,
+              visualStyle.wetFloor ? 1 : 0)
+
         window.contentView = rootView
         window.center()
         window.orderFront(nil)
