@@ -40,6 +40,8 @@ targets:
       - sdk: CoreAudio.framework
       - sdk: AudioUnit.framework
       - sdk: AudioToolbox.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
     sources:
       - path: ManzoApp
         excludes:
