@@ -23,6 +23,10 @@ import AppKit
     private var currentTrackIndex: Int = 0
     private var pollTimer: Timer? = nil
 
+    // Phase 5: retain the window for the app's lifetime.
+    // ARC would deallocate a window stored only in a local var on the next runloop cycle.
+    private var manzoWindow: ManzoWindow? = nil
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -35,36 +39,50 @@ import AppKit
             resolveFixturePath(name: "test2", ext: "mp3"),
         ]
 
-        // Open + play the first track.
+        // Open + play the first track (audio is optional — window always appears even if absent).
         let firstPath = trackQueue[currentTrackIndex]
-        guard FileManager.default.fileExists(atPath: firstPath) else {
+        if !FileManager.default.fileExists(atPath: firstPath) {
             NSLog("MANZO Phase 3: first track not found at \(firstPath) — skipping playback")
-            return
-        }
-        manzoHandle = manzo_open(firstPath)
-        guard let handle = manzoHandle else {
-            NSLog("MANZO Phase 3: manzo_open returned null for \(firstPath)")
-            return
-        }
-        let playResult = manzo_play(handle)
-        if playResult == 0 {
-            NSLog("MANZO Phase 3: playback started — \(firstPath)")
         } else {
-            NSLog("MANZO Phase 3: manzo_play failed with code \(playResult) — \(firstPath)")
-            return
+            manzoHandle = manzo_open(firstPath)
+            if manzoHandle == nil {
+                NSLog("MANZO Phase 3: manzo_open returned null for \(firstPath)")
+            } else {
+                let playResult = manzo_play(manzoHandle!)
+                if playResult == 0 {
+                    NSLog("MANZO Phase 3: playback started — \(firstPath)")
+                } else {
+                    NSLog("MANZO Phase 3: manzo_play failed with code \(playResult) — \(firstPath)")
+                }
+
+                // Phase 3 (D-05 / AUDIO-05): start 100 ms polling timer to detect ENDED and auto-advance.
+                // Timer runs on the main runloop in default mode; pollPlaybackState reads state via FFI
+                // and triggers the queue handoff when MANZO_STATE_ENDED is observed.
+                pollTimer = Timer.scheduledTimer(
+                    timeInterval: 0.1,
+                    target: self,
+                    selector: #selector(pollPlaybackState),
+                    userInfo: nil,
+                    repeats: true
+                )
+                NSLog("MANZO Phase 3: 100 ms state poll timer armed — queue size \(trackQueue.count)")
+            }
         }
 
-        // Phase 3 (D-05 / AUDIO-05): start 100 ms polling timer to detect ENDED and auto-advance.
-        // Timer runs on the main runloop in default mode; pollPlaybackState reads state via FFI
-        // and triggers the queue handoff when MANZO_STATE_ENDED is observed.
-        pollTimer = Timer.scheduledTimer(
-            timeInterval: 0.1,
-            target: self,
-            selector: #selector(pollPlaybackState),
-            userInfo: nil,
-            repeats: true
-        )
-        NSLog("MANZO Phase 3: 100 ms state poll timer armed — queue size \(trackQueue.count)")
+        // MARK: Phase 5 — window setup
+        // Window always appears regardless of audio fixture availability.
+        // D-04: isOpaque=false and backgroundColor=.clear are set inside ManzoWindow.init()
+        //        (before this call site), so they are already set before orderFront below.
+        let window = ManzoWindow()
+        let rootView = ManzoRootView(frame: window.frame)
+        window.contentView = rootView
+        window.center()
+        window.orderFront(nil)
+        // D-12: single call — AppKit saves frame on move and restores on next launch automatically.
+        // Must be called AFTER orderFront so AppKit can match the autosave name to the visible window.
+        window.setFrameAutosaveName("ManzoMainWindow")
+        manzoWindow = window   // retain: prevent ARC deallocation
+        NSLog("MANZO Phase 5: window ordered front — 275×116 pt frameless, autosave=ManzoMainWindow")
     }
 
     func applicationWillTerminate(_ notification: Notification) {

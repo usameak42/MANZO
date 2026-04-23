@@ -66,7 +66,9 @@ class ManzoRootView: NSVisualEffectView {
         for panel in [titleView, bodyView, statusView] {
             panel.translatesAutoresizingMaskIntoConstraints = false
             panel.wantsLayer = true        // D-09: CALayer backing
-            panel.isOpaque   = false       // D-09: transparent
+            // D-09: transparent — NSView.isOpaque is a get-only computed property; NSView
+            // returns false by default when wantsLayer=true and no background color is set.
+            // No assignment needed (and the compiler rejects it as get-only).
             // D-09: plain CALayer() — Phase 6 inserts CAGradientLayer sublayers here.
             // Do NOT add sublayers, set backgroundColor, or specialize layer type in Phase 5.
             addSubview(panel)
