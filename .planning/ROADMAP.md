@@ -3,7 +3,7 @@
 **Milestone:** v1.0 — Initial Release
 **Granularity:** Fine
 **Requirements:** 32 v1 requirements
-**Last updated:** 2026-04-22
+**Last updated:** 2026-04-23
 
 ---
 
@@ -125,7 +125,11 @@ Plans:
 4. User can drag the window by clicking any non-interactive chrome area; the window moves with the cursor.
 5. After relaunch the window appears at the same position and size it was at when last closed.
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — ManzoWindow.swift + ManzoRootView.swift: frameless window subclass, single-root vibrancy, three panel NSViews, drag handler
+- [ ] 05-02-PLAN.md — AppDelegate wiring: window construction, contentView, orderFront, setFrameAutosaveName, xcodegen verify, visual checkpoint
 
 ---
 
@@ -205,7 +209,7 @@ Plans:
 | 2. Audio Pipeline | 3/3 | Complete | 2026-04-22 |
 | 3. Playback Controls | 3/3 | Complete | 2026-04-22 |
 | 4. DSP Engine | 0/3 | Not started | - |
-| 5. UI Shell | 0/? | Not started | - |
+| 5. UI Shell | 0/2 | Not started | - |
 | 6. Neo-Aero Visual Stack | 0/? | Not started | - |
 | 7. Spectrum Analyzer | 0/? | Not started | - |
 | 8. Playlist & Library | 0/? | Not started | - |
