@@ -42,7 +42,10 @@ blocked: 0
   reason: "User reported: Cmd-Q does not quit the app; had to use menu > Quit instead. Position did persist correctly."
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "NSApp.mainMenu was never set programmatically. Auto-synthesised menu has no keyEquivalent on Quit item, so performKeyEquivalent finds no match for Cmd-Q."
+  artifacts:
+    - path: "ManzoApp/ManzoApp/AppDelegate.swift"
+      issue: "No buildMainMenu() call — NSApp.mainMenu was nil, Quit item had no keyEquivalent"
+  missing:
+    - "buildMainMenu() adding Quit item with keyEquivalent: \"q\" and action: #selector(NSApplication.terminate(_:))"
+  debug_session: ".planning/debug/cmd-q-no-quit.md"
