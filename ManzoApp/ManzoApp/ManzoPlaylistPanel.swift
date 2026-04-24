@@ -31,8 +31,9 @@ final class ManzoPlaylistPanel: NSPanel {
     // MARK: - Empty State
     private let emptyStateContainer = NSView()
 
-    // MARK: - Delegate (set by AppDelegate in Plan 08-03)
-    weak var delegate: ManzoPlaylistPanelDelegate? = nil
+    // MARK: - Playlist delegate (set by AppDelegate in Plan 08-03)
+    // Cannot shadow NSWindow.delegate — use a distinct property name.
+    weak var playlistDelegate: ManzoPlaylistPanelDelegate? = nil
 
     // MARK: - canBecomeKey / canBecomeMain
 
@@ -346,20 +347,20 @@ final class ManzoPlaylistPanel: NSPanel {
     // MARK: - Actions (delegate wired by AppDelegate in Plan 08-03)
 
     @objc private func addButtonClicked(_ sender: Any) {
-        delegate?.playlistPanelDidRequestAdd(self)
+        playlistDelegate?.playlistPanelDidRequestAdd(self)
     }
 
     @objc private func removeButtonClicked(_ sender: Any) {
         let row = tableView.selectedRow
         guard row >= 0 else { return }
-        delegate?.playlistPanel(self, didRequestRemoveAt: row)
+        playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
     }
 
     /// T-08-06: guard row >= 0 prevents out-of-range delegate calls.
     @objc func handleDoubleClick(_ sender: Any) {
         let row = tableView.clickedRow
         guard row >= 0 else { return }
-        delegate?.playlistPanel(self, didDoubleClickRow: row)
+        playlistDelegate?.playlistPanel(self, didDoubleClickRow: row)
     }
 
     // MARK: - Factory Helpers
