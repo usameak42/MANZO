@@ -513,7 +513,7 @@ extension AppDelegate: NSTableViewDelegate {
     }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        return 18  // Winamp canonical row height (UI-SPEC)
+        return 24  // matches ManzoPlaylistPanel.tableView.rowHeight
     }
 
     // Delete key removal (D-13).

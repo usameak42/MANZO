@@ -129,11 +129,15 @@ final class ManzoPlaylistRowBackground: NSTableRowView {
 
     private let p3 = CGColorSpace(name: CGColorSpace.displayP3)!
 
+    // With selectionHighlightStyle = .none, AppKit may not trigger setNeedsDisplay
+    // when isSelected changes — force redraw manually.
+    override var isSelected: Bool { didSet { needsDisplay = true } }
+
     override func drawSelection(in dirtyRect: NSRect) {
         guard isSelected else { return }
-        let selColor = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.20, 0.40, 0.65, 0.40])!)!
+        let selColor = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.15, 0.45, 0.85, 0.70])!)!
         selColor.setFill()
-        let selRect = bounds.insetBy(dx: 2, dy: 0)
+        let selRect = bounds.insetBy(dx: 2, dy: 1)
         let path = NSBezierPath(roundedRect: selRect, xRadius: 3, yRadius: 3)
         path.fill()
     }

@@ -374,8 +374,8 @@ final class ManzoPlaylistPanel: NSPanel {
     // MARK: - Keyboard: Delete key removal (D-13 path 1)
 
     override func keyDown(with event: NSEvent) {
-        // Delete (backspace = 51) or Forward Delete (117) removes selected row.
-        if event.keyCode == 51 || event.keyCode == 117 {
+        // Forward Delete only (Fn+Delete = 117). Plain Backspace (51) is a no-op.
+        if event.keyCode == 117 {
             let row = tableView.selectedRow
             guard row >= 0 else { return }
             playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
