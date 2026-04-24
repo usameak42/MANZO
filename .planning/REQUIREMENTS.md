@@ -49,6 +49,13 @@
 - [ ] **LIB-03**: Playlist (file paths and metadata) persists between app launches
 - [ ] **LIB-04**: User can remove individual tracks from the playlist
 
+### Transport Controls and LCD Display
+
+- [ ] **CTRL-01**: Main window LCD area displays scrolling track title, elapsed time, total duration, bitrate (kbps), and sample rate (kHz) as green text on a black Winamp-style background
+- [ ] **CTRL-02**: Transport buttons (prev, play/pause, stop, next) are visible in the main window and wired to the existing `manzo_play`, `manzo_pause`, `manzo_stop`, and `manzo_seek` FFI calls
+- [ ] **CTRL-03**: A clickable seek bar shows real-time track position (updated on the 100ms polling loop) and seeks to the tapped/dragged position via `manzo_seek`
+- [ ] **CTRL-04**: Volume and balance sliders are wired to `manzo_set_volume` and `manzo_set_pan`; audio level and stereo position change immediately without dropout
+
 ### Online Streaming
 
 - [ ] **NET-01**: App bundles a yt-dlp universal binary at `Contents/MacOS/yt-dlp`
