@@ -6,7 +6,7 @@ import AppKit
 // All inner panels (titleView, bodyView, toolbarView) are plain NSView with wantsLayer=true.
 // NeoAero chrome applied via NeoAeroLayerFactory in bodyFocus mode (D-05).
 
-private let kPanelWidth:       CGFloat = 275   // Winamp config_pe_width (CONTEXT.md D-01)
+private let kPanelWidth:       CGFloat = 350   // Winamp config_pe_width — widened per UAT feedback
 private let kPanelInitHeight:  CGFloat = 116   // Winamp config_pe_height (CONTEXT.md D-01)
 private let kPanelMinHeight:   CGFloat = 60    // UI-SPEC: minimum usable height
 private let kPLTitleBarHeight: CGFloat = 16    // UI-SPEC: titleView height (16pt strip)
