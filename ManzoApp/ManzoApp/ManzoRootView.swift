@@ -221,6 +221,119 @@ class ManzoRootView: NSVisualEffectView {
         NSLog("MANZO Phase 8: ManzoRootView.addPLButton — PL button added to statusView, trailing-8pt")
     }
 
+    // MARK: - Phase 8.1: LCD + Transport Controls Layout (D-02)
+
+    /// ManzoLCDView: x=0, y=14, width=275 (full), height=43 (D-04).
+    /// Added directly to ManzoRootView (not bodyView/statusView) — D-02.
+    func addLCDView(_ view: ManzoLCDView) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: topAnchor, constant: 14),
+            view.leadingAnchor.constraint(equalTo: leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: trailingAnchor),
+            view.heightAnchor.constraint(equalToConstant: 43),
+        ])
+        NSLog("MANZO Phase 8.1: ManzoRootView.addLCDView — 275×43pt at y=14")
+    }
+
+    /// ManzoSeekBar: x=16, y=72, width=248, height=10 (D-07).
+    /// Added directly to ManzoRootView — D-02.
+    func addSeekBar(_ view: ManzoSeekBar) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: topAnchor, constant: 72),
+            view.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            view.widthAnchor.constraint(equalToConstant: 248),
+            view.heightAnchor.constraint(equalToConstant: 10),
+        ])
+        NSLog("MANZO Phase 8.1: ManzoRootView.addSeekBar — 248×10pt at x=16, y=72")
+    }
+
+    /// Volume slider: x=107, y=57, width=68, height=13, range 0–255 (D-08).
+    /// Added directly to ManzoRootView — D-02.
+    func addVolumeSlider(_ view: ManzoSlider) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: topAnchor, constant: 57),
+            view.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 107),
+            view.widthAnchor.constraint(equalToConstant: 68),
+            view.heightAnchor.constraint(equalToConstant: 13),
+        ])
+        NSLog("MANZO Phase 8.1: ManzoRootView.addVolumeSlider — 68×13pt at x=107, y=57")
+    }
+
+    /// Pan slider: x=177, y=57, width=38, height=13, range -127–+127 (D-08).
+    /// Added directly to ManzoRootView — D-02.
+    func addPanSlider(_ view: ManzoSlider) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: topAnchor, constant: 57),
+            view.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 177),
+            view.widthAnchor.constraint(equalToConstant: 38),
+            view.heightAnchor.constraint(equalToConstant: 13),
+        ])
+        NSLog("MANZO Phase 8.1: ManzoRootView.addPanSlider — 38×13pt at x=177, y=57")
+    }
+
+    /// Generic transport button adder (D-02, D-09).
+    /// Caller passes exact x,y,width,height from D-01 for each button.
+    /// Added directly to ManzoRootView — transport row (y=88–106) spans bodyView/statusView boundary.
+    func addTransportButton(_ view: ManzoTransportButton, x: CGFloat, y: CGFloat,
+                            width: CGFloat, height: CGFloat) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: topAnchor, constant: y),
+            view.leadingAnchor.constraint(equalTo: leadingAnchor, constant: x),
+            view.widthAnchor.constraint(equalToConstant: width),
+            view.heightAnchor.constraint(equalToConstant: height),
+        ])
+        NSLog("MANZO Phase 8.1: ManzoRootView.addTransportButton — label=%@, frame=(%g,%g,%g×%g)",
+              (view.label as NSString), x, y, width, height)
+    }
+
+    // MARK: - Phase 8.1: Spectrum View Relocation (D-03)
+
+    /// Relocates the ManzoSpectrumView from Phase 7's bottom-anchored layout to the Winamp viz band.
+    /// Must be called AFTER addSpectrumView() has added the view to bodyView.
+    /// New position: bodyView.topAnchor + 43, height=32, width=107, leading edge (D-03).
+    /// Calls bodyView.layoutSubtreeIfNeeded() BEFORE applySpectrumChromeMask (UI-SPEC note 10).
+    func relocateSpectrumView() {
+        guard let sv = spectrumView else {
+            NSLog("MANZO Phase 8.1: ManzoRootView.relocateSpectrumView — spectrumView is nil, skipping")
+            return
+        }
+        // Remove ALL constraints on sv owned by sv itself.
+        sv.removeConstraints(sv.constraints)
+        // Remove superview-owned constraints referencing sv (Phase 7 created these in addSpectrumView).
+        if let superConstraints = sv.superview?.constraints {
+            let toRemove = superConstraints.filter { c in
+                c.firstItem as? NSView == sv || c.secondItem as? NSView == sv
+            }
+            NSLayoutConstraint.deactivate(toRemove)
+        }
+
+        // Apply new Winamp viz band constraints (D-03):
+        // topAnchor = bodyView.topAnchor + 43, height=32, width=107, leadingAnchor = bodyView.leadingAnchor
+        NSLayoutConstraint.activate([
+            sv.topAnchor.constraint(equalTo: bodyView.topAnchor, constant: 43),
+            sv.heightAnchor.constraint(equalToConstant: 32),
+            sv.widthAnchor.constraint(equalToConstant: 107),
+            sv.leadingAnchor.constraint(equalTo: bodyView.leadingAnchor),
+        ])
+
+        // UI-SPEC note 10: call layoutSubtreeIfNeeded BEFORE applySpectrumChromeMask;
+        // otherwise spectrumFrame is CGRect.zero.
+        bodyView.layoutSubtreeIfNeeded()
+        applySpectrumChromeMask(spectrumFrame: sv.frame)
+
+        NSLog("MANZO Phase 8.1: ManzoRootView.relocateSpectrumView — spectrum at bodyView.topAnchor+43, 107×32pt")
+    }
+
     private func applySpectrumChromeMask(spectrumFrame: CGRect) {
         // threeBubbles / bodyFocus: container lives in bodyView.layer.
         if let neoAeroLayer = bodyView.layer?.sublayers?.first(where: {
