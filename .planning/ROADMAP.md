@@ -17,7 +17,7 @@
 - [x] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
 - [ ] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
 - [ ] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
-- [ ] **Phase 8.1: Transport Controls and LCD Display** — Winamp-style LCD, transport buttons, seek bar, volume/pan sliders (INSERTED)
+- [x] **Phase 8.1: Transport Controls and LCD Display** — Winamp-style LCD, transport buttons, seek bar, volume/pan sliders (INSERTED)
 - [ ] **Phase 9: Online Streaming** — yt-dlp sidecar bundle, URL streaming, quarantine strip
 
 ---
@@ -218,9 +218,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 08.1-01-PLAN.md — ManzoLCDView + ManzoSeekBar + ManzoSlider (pure view layer, no FFI)
-- [ ] 08.1-02-PLAN.md — ManzoTransportButton + PlaylistManager.prev() (transport button chrome + model)
-- [ ] 08.1-03-PLAN.md — ManzoRootView layout methods + AppDelegate wiring + xcodebuild verify
+- [x] 08.1-01-PLAN.md — ManzoLCDView + ManzoSeekBar + ManzoSlider (pure view layer, no FFI)
+- [x] 08.1-02-PLAN.md — ManzoTransportButton + PlaylistManager.prev() (transport button chrome + model)
+- [x] 08.1-03-PLAN.md — ManzoRootView layout methods + AppDelegate wiring + xcodebuild verify
 
 ---
 
@@ -253,7 +253,7 @@ Plans:
 | 6. Neo-Aero Visual Stack | 0/? | Not started | - |
 | 7. Spectrum Analyzer | 0/? | Not started | - |
 | 8. Playlist & Library | 0/? | Not started | - |
-| 8.1. Transport Controls and LCD Display | 0/? | Not started | - |
+| 8.1. Transport Controls and LCD Display | 3/3 | Complete | 2026-04-24 |
 | 9. Online Streaming | 0/? | Not started | - |
 
 ---
