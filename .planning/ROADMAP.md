@@ -300,3 +300,24 @@ Plans:
 | NET-03 | Phase 9 |
 
 **Mapped: 36/36**
+
+---
+
+## v2 Backlog
+
+Features deferred from v1.0 scope. No phase assigned; implement after v1.0 ships.
+
+### FEAT-V2-01: Dynamic Wallpaper Color Sampling
+
+**Summary:** On launch and when the desktop wallpaper changes, sample the wallpaper's dominant colors and generate a matching ManzoVisualStyle palette automatically.
+
+**Implementation sketch:**
+- Observe `NSWorkspace.didChangeDesktopImageNotification` for wallpaper changes; also fire on launch
+- Read wallpaper via `NSWorkspace.shared.desktopImageURL(for:)` → `CIImage`
+- Extract dominant colors using `CIFilter` kMeans clustering (e.g. `CIKMeans` with k=5)
+- Map cluster centroids → `ManzoVisualStyle` palette (base gradient stops, specular tint, rim glow color)
+- Apply via `NeoAeroLayerFactory` — existing `applyStyle` wiring means gradient updates automatically
+- User toggle in preferences: "Auto (match wallpaper)" vs manual theme selection
+- Theme persists to `UserDefaults`; auto mode re-samples on next wallpaper change notification
+
+**Dependencies:** Phase 6 (NeoAeroLayerFactory + ManzoVisualStyle) — already complete
