@@ -21,6 +21,22 @@ class ManzoWindow: NSWindow {
     override var canBecomeKey:  Bool { true }
     override var canBecomeMain: Bool { true }
 
+    // Called every time the window moves during a drag — AppDelegate wires this
+    // to update the playlist panel frame in real time (replaces didMoveNotification).
+    var onWindowMoved: (() -> Void)?
+    private var dragOffset: NSPoint = .zero
+
+    override func mouseDown(with event: NSEvent) {
+        let mouse = NSEvent.mouseLocation
+        dragOffset = NSPoint(x: mouse.x - frame.origin.x, y: mouse.y - frame.origin.y)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        let mouse = NSEvent.mouseLocation
+        setFrameOrigin(NSPoint(x: mouse.x - dragOffset.x, y: mouse.y - dragOffset.y))
+        onWindowMoved?()
+    }
+
     // Designated initializer — called from AppDelegate.applicationDidFinishLaunching.
     // D-03: styleMask = [.borderless] — no title bar, no traffic-light buttons, fixed size.
     // D-04: isOpaque and backgroundColor are set immediately in body — they MUST be set

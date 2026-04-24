@@ -149,14 +149,9 @@ import AppKit
         panel.tableView.reloadData()
         panel.setEmptyStateVisible(playlistManager.tracks.isEmpty)
 
-        // Co-move: observe main window move notifications (D-03).
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didMoveNotification,
-            object:  window,
-            queue:   .main
-        ) { [weak self] _ in
-            self?.handleMainWindowMoved()
-        }
+        // Co-move: fire on every mouseDragged event in ManzoWindow so panel follows in real time.
+        // Replaces NSWindow.didMoveNotification which fires too infrequently (UAT fix, issue 3).
+        window.onWindowMoved = { [weak self] in self?.handleMainWindowMoved() }
         NSLog("MANZO Phase 8: ManzoPlaylistPanel created — position below main window, co-move armed")
     }
 
@@ -582,8 +577,9 @@ extension AppDelegate {
         // Nil spectrum before close to prevent dangling handle access (Phase 7 fix pattern).
         spectrumView?.manzoHandle = nil
 
-        // Close current handle (close-before-open: only one cpal stream at a time).
+        // Stop before close — prevents second cpal stream overlapping during track switch (UAT fix).
         if let handle = manzoHandle {
+            manzo_stop(handle)
             manzo_close(handle)
             manzoHandle = nil
         }

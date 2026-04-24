@@ -294,7 +294,9 @@ class ManzoRootView: NSVisualEffectView {
     // D-11: full-chrome drag — matches Winamp main_nonclient.cpp return HTCLIENT for all pixels.
     // Interactive controls added in Phase 6+ consume mouseDown in their own subviews first;
     // drag falls through to unoccupied chrome naturally. No hit-test exclusion zones needed.
+    // Delegates to ManzoWindow.mouseDown/mouseDragged via responder chain (replaces performDrag
+    // so ManzoWindow can fire onWindowMoved on every drag event — eliminates co-move lag).
     override func mouseDown(with event: NSEvent) {
-        window?.performDrag(with: event)
+        super.mouseDown(with: event)
     }
 }

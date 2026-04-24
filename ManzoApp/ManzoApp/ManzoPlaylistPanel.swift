@@ -183,7 +183,7 @@ final class ManzoPlaylistPanel: NSPanel {
         tableView.addTableColumn(column)
 
         tableView.headerView              = nil             // no column header (Winamp aesthetic)
-        tableView.rowHeight               = 18              // Winamp canonical row height (UI-SPEC)
+        tableView.rowHeight               = 20              // Winamp row height — 20 pt per UAT feedback
         tableView.backgroundColor         = .clear
         tableView.selectionHighlightStyle = .none           // custom selection via ManzoPlaylistRowBackground
         tableView.gridStyleMask           = []              // disable system grid; PlaylistRowView draws separator
