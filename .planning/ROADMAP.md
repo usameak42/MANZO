@@ -17,6 +17,7 @@
 - [x] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
 - [ ] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
 - [ ] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
+- [ ] **Phase 8.1: Transport Controls and LCD Display** — Winamp-style LCD, transport buttons, seek bar, volume/pan sliders (INSERTED)
 - [ ] **Phase 9: Online Streaming** — yt-dlp sidecar bundle, URL streaming, quarantine strip
 
 ---
@@ -201,6 +202,28 @@ Plans:
 
 ---
 
+### Phase 8.1: Transport Controls and LCD Display (INSERTED)
+
+**Goal:** The main window presents a Winamp-style LCD display (scrolling title, elapsed/total time, bitrate, kHz) and a full transport control row (prev, play/pause, stop, next), a clickable seek bar, and volume/pan sliders — all wired to the existing Rust FFI.
+**Depends on:** Phase 8
+**Requirements:** CTRL-01, CTRL-02, CTRL-03, CTRL-04
+**UI hint:** yes
+
+**Success criteria:**
+1. The LCD area in the main window displays the current track title (scrolling if too long), elapsed time, total duration, bitrate in kbps, and sample rate in kHz — green text on black Winamp-style background.
+2. Clicking prev/play/pause/stop/next buttons produces the correct audio state change via the existing `manzo_play`, `manzo_pause`, `manzo_stop`, `manzo_seek` FFI calls within one buffer cycle.
+3. The seek bar reflects track position in real time (updated on the 100ms polling loop); clicking or dragging it seeks to the corresponding position via `manzo_seek`.
+4. Volume and pan sliders are wired to `manzo_set_volume` and `manzo_set_pan`; audio level and stereo position change immediately without dropout.
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 08.1-01-PLAN.md — ManzoLCDView + ManzoSeekBar + ManzoSlider (pure view layer, no FFI)
+- [ ] 08.1-02-PLAN.md — ManzoTransportButton + PlaylistManager.prev() (transport button chrome + model)
+- [ ] 08.1-03-PLAN.md — ManzoRootView layout methods + AppDelegate wiring + xcodebuild verify
+
+---
+
 ### Phase 9: Online Streaming
 
 **Goal:** Users can paste a URL and stream audio via a bundled yt-dlp sidecar piped into the Rust audio pipeline, with the quarantine attribute stripped automatically on first launch.
@@ -230,6 +253,7 @@ Plans:
 | 6. Neo-Aero Visual Stack | 0/? | Not started | - |
 | 7. Spectrum Analyzer | 0/? | Not started | - |
 | 8. Playlist & Library | 0/? | Not started | - |
+| 8.1. Transport Controls and LCD Display | 0/? | Not started | - |
 | 9. Online Streaming | 0/? | Not started | - |
 
 ---
@@ -267,8 +291,12 @@ Plans:
 | LIB-02 | Phase 8 |
 | LIB-03 | Phase 8 |
 | LIB-04 | Phase 8 |
+| CTRL-01 | Phase 8.1 |
+| CTRL-02 | Phase 8.1 |
+| CTRL-03 | Phase 8.1 |
+| CTRL-04 | Phase 8.1 |
 | NET-01 | Phase 9 |
 | NET-02 | Phase 9 |
 | NET-03 | Phase 9 |
 
-**Mapped: 32/32**
+**Mapped: 36/36**
