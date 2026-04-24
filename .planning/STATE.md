@@ -19,7 +19,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** A tactile, skeuomorphic music player that sounds and looks like Winamp — running native on Apple Silicon, with glass chrome you can feel and DSP math bit-accurate to the original.
-**Current focus:** Phase 8.1 — Transport Controls and LCD Display
+**Current focus:** UI paused — awaiting Claude Design handoff bundle
 
 ---
 
@@ -38,7 +38,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 | 6 | Neo-Aero Visual Stack | Complete (3/3) | 3 |
 | 7 | Spectrum Analyzer | Complete (3/3) | 3 |
 | 8 | Playlist & Library | Ready to execute (5/5) | 5 |
-| 8.1 | Transport Controls and LCD Display | Complete (3/3) | 3 |
+| 8.1 | Transport Controls and LCD Display | Superseded — Claude Design handoff pending | 3 |
 | 9 | Online Streaming | Not Started | 0 |
 
 **Progress:** [██████░░░░] 67% (6/9 phases complete)
@@ -103,7 +103,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Blockers
 
-*(None currently)*
+- **UI PAUSED — Claude Design handoff pending.** Phase 8.1 visual layer will be replaced by Claude Design output. Do not execute any UI phases or modify Swift view files until handoff bundle arrives.
 
 ---
 
@@ -123,3 +123,4 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 2026-04-24 — Phase 8.1 inserted (URGENT): Transport Controls and LCD Display — gap discovered post-Phase 8; transport buttons/LCD/seek bar/sliders missing from original roadmap; 4 new requirements (CTRL-01–04) added; directory created at .planning/phases/08.1-transport-controls-and-lcd-display/
 2026-04-24 — Phase 8.1 UI-SPEC approved: transport controls and LCD display design contract complete; 6/6 dimensions PASS (typography FLAG non-blocking — 8pt/9pt 1pt diff intentional, Winamp-faithful); LCD green on black established as focal point; Winamp absolute coords locked as exceptions
 2026-04-24 — Phase 8.1 planned: 3 plans in 2 waves (Wave 1: ManzoLCDView+SeekBar+Slider + ManzoTransportButton+prev() in parallel; Wave 2: ManzoRootView layout methods + AppDelegate wiring + xcodebuild verify); all CTRL-01–04 covered; verification passed
+2026-04-24 — Phase 8.1 superseded: entire UI visual layer to be replaced by Claude Design handoff; UAT halted after 1/15 tests (LCD visible: pass); all UI work paused pending handoff bundle
