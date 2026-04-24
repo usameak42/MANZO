@@ -80,6 +80,7 @@ final class ManzoSeekBar: NSView {
     // MARK: - Mouse Handling
 
     override func mouseDown(with event: NSEvent) {
+        guard duration > 0 else { return }   // no-op when nothing is loaded
         isDragging = true
         let t = seekTime(from: event)
         onSeek?(t)
@@ -89,6 +90,7 @@ final class ManzoSeekBar: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        guard duration > 0 else { return }   // no-op when nothing is loaded
         let t = seekTime(from: event)
         onSeek?(t)
         applyDragFill(seekTime: t)
