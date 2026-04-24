@@ -81,7 +81,11 @@ final class PlaylistManager {
             currentIndex = insertAt
         } else if from < currentIndex, to > currentIndex {
             currentIndex -= 1
-        } else if from > currentIndex, to <= currentIndex {
+        } else if from > currentIndex, insertAt < currentIndex {
+            // Item moved from below the current track to above it — current shifts down by 1.
+            currentIndex += 1
+        } else if from > currentIndex, insertAt == currentIndex {
+            // Item inserted at the exact same slot as current — current shifts down by 1.
             currentIndex += 1
         }
         save()
