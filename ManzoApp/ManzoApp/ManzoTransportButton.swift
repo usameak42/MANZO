@@ -42,7 +42,6 @@ final class ManzoTransportButton: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        isOpaque   = false
         // Note: setupChrome() uses bounds — must be called AFTER frame is set.
         // AppDelegate sets frame before adding to superview, so bounds is valid here.
         setupChrome()
