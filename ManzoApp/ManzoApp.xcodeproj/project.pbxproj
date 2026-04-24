@@ -15,6 +15,7 @@
 		56D6897176EC8070696391FD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB29267B5851BABE6CA438B /* AppDelegate.swift */; };
 		5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */; };
 		7020B1D17A75D2BC5BE32628 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6B875FD042952670DACEE80 /* Metal.framework */; };
+		05ADD9138FAC47C196EDFF14 /* PlaylistManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F803ACFF46E542BFA25AD79F /* PlaylistManager.swift */; };
 		8106CFB6302A1904E2CC73F1 /* PlaylistTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */; };
 		B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */; };
 		BB8CFD76611D53169E6CFAF5 /* ManzoRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFAB0F804C124176548400A /* ManzoRootView.swift */; };
@@ -33,6 +34,7 @@
 		7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRowView.swift; sourceTree = "<group>"; };
 		8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoVisualStyle.swift; sourceTree = "<group>"; };
 		8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		F803ACFF46E542BFA25AD79F /* PlaylistManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistManager.swift; sourceTree = "<group>"; };
 		945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistTrack.swift; sourceTree = "<group>"; };
 		9538E522FF417595DFD591FA /* ManzoSpectrumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoSpectrumView.swift; sourceTree = "<group>"; };
 		97DD12C03C895AB63667BAC7 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
@@ -97,6 +99,7 @@
 				8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */,
 				EB24B5754794121E0EF03F74 /* ManzoWindow.swift */,
 				AE7A676193ACE6692A91733F /* NeoAeroLayer.swift */,
+				F803ACFF46E542BFA25AD79F /* PlaylistManager.swift */,
 				7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */,
 				945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */,
 				EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */,
@@ -198,6 +201,7 @@
 				4A30B488419E416CDDA65738 /* ManzoVisualStyle.swift in Sources */,
 				2CF6D15A8144F531EB7427E4 /* ManzoWindow.swift in Sources */,
 				F6C246C01CA14DC04C9DCB10 /* NeoAeroLayer.swift in Sources */,
+				05ADD9138FAC47C196EDFF14 /* PlaylistManager.swift in Sources */,
 				EF617FDF838CD8ABAD400DDD /* PlaylistRowView.swift in Sources */,
 				8106CFB6302A1904E2CC73F1 /* PlaylistTrack.swift in Sources */,
 				F0E005EBA678872CBD98A034 /* Spectrum.metal in Sources */,
