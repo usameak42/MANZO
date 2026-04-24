@@ -309,7 +309,7 @@ import AppKit
 
         // Phase 8.1 (D-12): four poll steps run on every non-ENDED tick.
         guard state == MANZO_STATE_ENDED else {
-            let position = Double(manzo_get_position(handle))
+            let position = Double(manzo_get_position(handle)) / 1000.0
             let duration = playlistManager.trackAt(playlistManager.currentIndex)?.duration ?? 0
 
             // Step 1: Update seek bar position (only when not dragging)
@@ -695,7 +695,7 @@ extension AppDelegate {
 
     /// Smart prev (D-11): if elapsed > 2s, restart current track; else go to previous track.
     func handlePrevButton() {
-        let elapsed = manzoHandle.map { Double(manzo_get_position($0)) } ?? 0
+        let elapsed = manzoHandle.map { Double(manzo_get_position($0)) / 1000.0 } ?? 0
         if elapsed > 2.0 {
             if let handle = manzoHandle {
                 manzo_seek(handle, 0)
