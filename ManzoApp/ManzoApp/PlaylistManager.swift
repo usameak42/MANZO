@@ -100,6 +100,20 @@ final class PlaylistManager {
         return tracks[currentIndex]
     }
 
+    /// Move to previous track. Returns the track at the new currentIndex.
+    /// If already at index 0, stays at 0 and returns trackAt(0) (D-11: "stay at first").
+    /// No save() call — index change is not a playlist mutation (tracks array unchanged).
+    func prev() -> PlaylistTrack? {
+        guard currentIndex > 0 else {
+            NSLog("MANZO Phase 8.1: PlaylistManager.prev — already at index 0, staying")
+            return trackAt(0)
+        }
+        currentIndex -= 1
+        NSLog("MANZO Phase 8.1: PlaylistManager.prev — moved to index=%d, path=%@",
+              currentIndex, tracks[currentIndex].path)
+        return tracks[currentIndex]
+    }
+
     /// Returns track at index, or nil if out of range.
     func trackAt(_ index: Int) -> PlaylistTrack? {
         guard index >= 0, index < tracks.count else { return nil }
