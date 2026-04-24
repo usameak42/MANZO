@@ -172,8 +172,9 @@ import AppKit
         let bar = ManzoSeekBar(frame: NSRect(x: 16, y: 72, width: 248, height: 10))
         bar.onSeek = { [weak self] t in
             guard let self = self, let handle = self.manzoHandle else { return }
-            manzo_seek(handle, UInt64(t * 1000))
-            NSLog("MANZO Phase 8.1: ManzoSeekBar.onSeek — seeking to %.2f", t)
+            let tMs = UInt64(max(0, t) * 1000)   // clamp negative before UInt64 conversion (crash guard)
+            manzo_seek(handle, tMs)
+            NSLog("MANZO Phase 8.1: ManzoSeekBar.onSeek — seeking to %.2fs (%llu ms)", t, tMs)
         }
         rootView.addSeekBar(bar)
         seekBar = bar
