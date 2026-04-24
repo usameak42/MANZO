@@ -205,26 +205,42 @@ class ManzoRootView: NSVisualEffectView {
     }
 
     private func applySpectrumChromeMask(spectrumFrame: CGRect) {
-        guard let neoAeroLayer = bodyView.layer?.sublayers?.first(where: {
+        // threeBubbles / bodyFocus: container lives in bodyView.layer.
+        if let neoAeroLayer = bodyView.layer?.sublayers?.first(where: {
+            ($0.value(forKey: "name") as? String) == "NeoAeroContainer"
+        }) {
+            let maskPath = CGMutablePath()
+            maskPath.addRect(bodyView.bounds)
+            maskPath.addRect(spectrumFrame)
+            let maskLayer = CAShapeLayer()
+            maskLayer.path = maskPath
+            maskLayer.fillRule = .evenOdd
+            maskLayer.frame = bodyView.bounds
+            neoAeroLayer.mask = maskLayer
+            NSLog("MANZO Phase 7: NeoAeroContainer chrome mask applied — spectrumFrame=%@",
+                  NSStringFromRect(spectrumFrame))
+            return
+        }
+
+        // unifiedSlab: single container lives in the root layer — convert coords.
+        guard let neoAeroLayer = layer?.sublayers?.first(where: {
             ($0.value(forKey: "name") as? String) == "NeoAeroContainer"
         }) else {
             NSLog("MANZO Phase 7: applySpectrumChromeMask — NeoAeroContainer not found; skipping mask")
             return
         }
 
-        // D-02: evenOdd punch-through — full bodyView rect minus spectrumView frame.
+        let rootSpectrumFrame = bodyView.convert(spectrumFrame, to: self)
         let maskPath = CGMutablePath()
-        maskPath.addRect(bodyView.bounds)
-        maskPath.addRect(spectrumFrame)
-
+        maskPath.addRect(bounds)
+        maskPath.addRect(rootSpectrumFrame)
         let maskLayer = CAShapeLayer()
         maskLayer.path = maskPath
         maskLayer.fillRule = .evenOdd
-        maskLayer.frame = bodyView.bounds
+        maskLayer.frame = bounds
         neoAeroLayer.mask = maskLayer
-
-        NSLog("MANZO Phase 7: NeoAeroContainer chrome mask applied — spectrumFrame=%@",
-              NSStringFromRect(spectrumFrame))
+        NSLog("MANZO Phase 7: NeoAeroContainer chrome mask applied (unifiedSlab) — rootSpectrumFrame=%@",
+              NSStringFromRect(rootSpectrumFrame))
     }
 
     // Removes all sublayers whose "name" key equals "NeoAeroContainer".
