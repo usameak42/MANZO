@@ -207,7 +207,7 @@ class ManzoSpectrumView: MTKView {
 
         // 2. Update peak-hold state (D-15: snap up immediately if fft > peak, else accelerating decay).
         //    Winamp draw_sa.cpp: t_vx[x] *= spfo; t_bx[x] -= (int)t_vx[x]
-        //    config_sa_peak_falloff = 1 → spfo = 1.1f
+        //    config_sa_peak_falloff = 1 → spfo = 1.1f 
         let spfo: Float = 1.1
         for i in 0..<75 {
             let fftVal = fftPtr[i]
@@ -338,10 +338,15 @@ class ManzoSpectrumView: MTKView {
 
     private func render() {
         // Threat model T-07-05: guard all optionals — render() returns early on nil (no crash).
+        // Build MTLRenderPassDescriptor manually from drawable.texture instead of using
+        // currentRenderPassDescriptor — the MTKView property internally calls currentDrawable
+        // a second time, which triggers "addPresentedHandler cannot be called after drawable
+        // has been presented" when isPaused=true with a manual render loop.
         guard let drawable = currentDrawable,
-              let cmdQueue = commandQueue,
-              let descriptor = currentRenderPassDescriptor else { return }
+              let cmdQueue = commandQueue else { return }
 
+        let descriptor = MTLRenderPassDescriptor()
+        descriptor.colorAttachments[0].texture     = drawable.texture
         descriptor.colorAttachments[0].loadAction  = .clear
         descriptor.colorAttachments[0].clearColor  = MTLClearColorMake(0, 0, 0, 0)
         descriptor.colorAttachments[0].storeAction = .store
