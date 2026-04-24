@@ -204,6 +204,23 @@ class ManzoRootView: NSVisualEffectView {
               NSStringFromRect(view.frame), NSStringFromRect(bodyView.bounds))
     }
 
+    // MARK: - Phase 8: PL Button Integration
+
+    /// Add the PL toggle button to statusView (trailing side, 8 pt right inset).
+    /// Called by AppDelegate after window setup. AppDelegate owns the NSButton instance.
+    /// Button size: 20×12 pt — matching Winamp mini-button aesthetic (UI-SPEC PL Toggle Button).
+    func addPLButton(_ button: NSButton) {
+        button.translatesAutoresizingMaskIntoConstraints = false
+        statusView.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: statusView.trailingAnchor, constant: -8),
+            button.centerYAnchor.constraint(equalTo: statusView.centerYAnchor),
+            button.widthAnchor.constraint(equalToConstant: 20),
+            button.heightAnchor.constraint(equalToConstant: 12),
+        ])
+        NSLog("MANZO Phase 8: ManzoRootView.addPLButton — PL button added to statusView, trailing-8pt")
+    }
+
     private func applySpectrumChromeMask(spectrumFrame: CGRect) {
         // threeBubbles / bodyFocus: container lives in bodyView.layer.
         if let neoAeroLayer = bodyView.layer?.sublayers?.first(where: {
