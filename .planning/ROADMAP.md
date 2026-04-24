@@ -190,7 +190,14 @@ Plans:
 3. User can select a track and remove it from the playlist; playback is unaffected if the removed track is not currently playing.
 4. On next app launch the playlist (file paths and display metadata) is restored to the state from the previous session.
 
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — PlaylistTrack + PlaylistManager (model layer + JSON persistence)
+- [ ] 08-02-PLAN.md — ManzoPlaylistPanel + PlaylistRowView (visual shell + NeoAero chrome)
+- [ ] 08-03-PLAN.md — AppDelegate wiring (PlaylistManager integration, PL button, co-move, Alt+E)
+- [ ] 08-04-PLAN.md — NSTableView drag-reorder + Delete key + right-click context menu
+- [ ] 08-05-PLAN.md — Build verification + end-to-end UAT checkpoint
 
 ---
 
