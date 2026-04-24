@@ -55,7 +55,7 @@ final class PlaylistRowView: NSTableCellView {
             durationLabel.widthAnchor.constraint(equalToConstant: 36),
 
             trackLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            trackLabel.trailingAnchor.constraint(equalTo: durationLabel.leadingAnchor, constant: -4),
+            trackLabel.trailingAnchor.constraint(equalTo: durationLabel.leadingAnchor, constant: -6),
             trackLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
