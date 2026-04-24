@@ -529,6 +529,10 @@ import AppKit
                 if !self.playlistManager.tracks.isEmpty {
                     let lastRow = self.playlistManager.tracks.count - 1
                     self.playlistPanel?.tableView.scrollRowToVisible(lastRow)
+                    // Auto-start first track if nothing is playing yet (poll timer unarmed).
+                    if self.manzoHandle == nil {
+                        self.jumpToTrack(at: 0)
+                    }
                 }
                 NSLog("MANZO Phase 8: NSOpenPanel — added %d files", op.urls.count)
             }
