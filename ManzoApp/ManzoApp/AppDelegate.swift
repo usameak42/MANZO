@@ -200,6 +200,10 @@ import AppKit
         panSl.value    =    0   // center
         panSl.onValueChanged = { [weak self] v in
             guard let self = self, let handle = self.manzoHandle else { return }
+            // v in [-127, +127]; divide by 127.0 to map to [-1.0, +1.0].
+            // Range is symmetric [-127, +127] (not the Winamp [-128, +127] signed-byte convention).
+            // This is intentional: manzo_set_pan expects a symmetric float and the slider has no
+            // -128 step, so the left extreme correctly sends -1.0 and right extreme sends +1.0.
             manzo_set_pan(handle, v / 127.0)
         }
         rootView.addPanSlider(panSl)
