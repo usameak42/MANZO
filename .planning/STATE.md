@@ -8,8 +8,8 @@ progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 25
-  completed_plans: 17
-  percent: 85
+  completed_plans: 19
+  percent: 88
 ---
 
 # MANZO — Project State
@@ -113,4 +113,5 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 2026-04-24 — Phase 6 complete: NeoAeroLayerFactory + ManzoVisualStyle + applyStyle wired; 5-layer P3 chrome, CAReplicatorLayer wet-floor, rasterization; 2 visual UAT items pending human run
 2026-04-24 — Phase 7 Wave 1 complete: Rust FFT pipeline (rustfft 1024-pt, 75 bars, try_lock double-buffer) + Metal renderer (ManzoSpectrumView .rgba16Float+displayP3, Spectrum.metal SDF bloom, Winamp peak-hold)
 2026-04-24 — Phase 7 UAT approved: spectrum bars visible during playback; 3 UAT fixes applied (bundle path, unifiedSlab NeoAeroContainer lookup, dangling-handle crash); Metal MTLRenderPassDescriptor warning fixed; full spectrum test deferred to Phase 8 with real audio files
+2026-04-24 — Phase 8 Wave 2 complete: 08-03 (AppDelegate full integration — PlaylistManager wiring, PL button, co-move, Alt+E, NSTableViewDataSource validateDrop+acceptDrop) + 08-04 (ManzoPlaylistPanel drag registration, Delete key, right-click context menu) — xcodebuild BUILD SUCCEEDED; PlaylistManager.swift added to pbxproj
 2026-04-24 — Phase 8 planned: 5 plans across 3 waves (Wave 1: model layer + visual shell in parallel; Wave 2: AppDelegate wiring + drag-reorder in parallel; Wave 3: UAT checkpoint); all LIB-01–04 covered; verification passed
