@@ -128,6 +128,7 @@ final class PlaylistManager {
 
     /// Atomic JSON write to ~/Library/Application Support/Manzo/playlist.json.
     func save() {
+        dispatchPrecondition(condition: .onQueue(.main))
         guard let data = try? JSONEncoder().encode(tracks) else {
             NSLog("MANZO Phase 8: PlaylistManager.save — encode failed (unexpected)")
             return
@@ -138,6 +139,7 @@ final class PlaylistManager {
 
     /// Load from JSON. Silently starts with empty list if file missing or corrupt.
     func load() {
+        dispatchPrecondition(condition: .onQueue(.main))
         guard let data  = try? Data(contentsOf: playlistURL),
               let list  = try? JSONDecoder().decode([PlaylistTrack].self, from: data)
         else {
