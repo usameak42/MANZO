@@ -196,7 +196,15 @@ final class ManzoPlaylistPanel: NSPanel {
         tableView.doubleAction = #selector(handleDoubleClick(_:))
         tableView.target = self
 
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupTableView — NSTableView 18pt rows, no header")
+        // Register drop destination for drag-reorder. NSPasteboardItem with .string type
+        // encodes the source row index as a String (pasteboardWriterForRow in AppDelegate 08-03).
+        // validateDrop + acceptDrop are implemented in AppDelegate (Plan 08-03).
+        tableView.registerForDraggedTypes([.string])
+        tableView.setDraggingSourceOperationMask([.move], forLocal: true)
+
+        setupContextMenu()
+
+        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupTableView — NSTableView 18pt rows, no header, drag-reorder registered")
     }
 
     // MARK: - Empty State (UI-SPEC Empty State section)
@@ -361,6 +369,41 @@ final class ManzoPlaylistPanel: NSPanel {
         let row = tableView.clickedRow
         guard row >= 0 else { return }
         playlistDelegate?.playlistPanel(self, didDoubleClickRow: row)
+    }
+
+    // MARK: - Keyboard: Delete key removal (D-13 path 1)
+
+    override func keyDown(with event: NSEvent) {
+        // Delete (backspace = 51) or Forward Delete (117) removes selected row.
+        if event.keyCode == 51 || event.keyCode == 117 {
+            let row = tableView.selectedRow
+            guard row >= 0 else { return }
+            playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
+        } else {
+            super.keyDown(with: event)
+        }
+    }
+
+    // MARK: - Right-click context menu (D-13 path 2)
+
+    private func setupContextMenu() {
+        let menu = NSMenu()
+        let removeItem = NSMenuItem(
+            title:  "Remove from Playlist",
+            action: #selector(contextMenuRemove(_:)),
+            keyEquivalent: ""
+        )
+        removeItem.target = self
+        menu.addItem(removeItem)
+        tableView.menu = menu
+    }
+
+    @objc private func contextMenuRemove(_ sender: Any) {
+        // NSTableView.clickedRow is valid during right-click (before menu fires).
+        // T-08-15: guard row >= 0 prevents out-of-bounds action when no row is right-clicked.
+        let row = tableView.clickedRow
+        guard row >= 0 else { return }
+        playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
     }
 
     // MARK: - Factory Helpers
