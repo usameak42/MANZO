@@ -7,7 +7,7 @@ last_updated: "2026-04-24T08:00:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
-  total_plans: 25
+  total_plans: 28
   completed_plans: 19
   percent: 88
 ---
@@ -38,6 +38,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 | 6 | Neo-Aero Visual Stack | Complete (3/3) | 3 |
 | 7 | Spectrum Analyzer | Complete (3/3) | 3 |
 | 8 | Playlist & Library | Ready to execute (5/5) | 5 |
+| 8.1 | Transport Controls and LCD Display | Ready to execute (3/3) | 3 |
 | 9 | Online Streaming | Not Started | 0 |
 
 **Progress:** [██████░░░░] 67% (6/9 phases complete)
@@ -88,6 +89,10 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 - macOS 26 SDK Liquid Glass AppKit API name — resolve in Phase 5
 - EQ band boost via manzo_set_eq (DSP-02) NOT fully verified with real audio — UAT key 1 fired during playback but no MP3 with rich frequency content was available to hear the effect clearly. Re-test in Phase 8/9 when playlist has real user-selected files.
 
+### Roadmap Evolution
+
+- Phase 8.1 inserted after Phase 8: Transport Controls and LCD Display (URGENT) — LCD display, transport buttons, seek bar, and volume/pan sliders were absent from the original roadmap; the audio FFI exists but no UI layer was ever specified. 4 new requirements added: CTRL-01–04.
+
 ---
 
 ## Todos
@@ -115,3 +120,6 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 2026-04-24 — Phase 7 UAT approved: spectrum bars visible during playback; 3 UAT fixes applied (bundle path, unifiedSlab NeoAeroContainer lookup, dangling-handle crash); Metal MTLRenderPassDescriptor warning fixed; full spectrum test deferred to Phase 8 with real audio files
 2026-04-24 — Phase 8 Wave 2 complete: 08-03 (AppDelegate full integration — PlaylistManager wiring, PL button, co-move, Alt+E, NSTableViewDataSource validateDrop+acceptDrop) + 08-04 (ManzoPlaylistPanel drag registration, Delete key, right-click context menu) — xcodebuild BUILD SUCCEEDED; PlaylistManager.swift added to pbxproj
 2026-04-24 — Phase 8 planned: 5 plans across 3 waves (Wave 1: model layer + visual shell in parallel; Wave 2: AppDelegate wiring + drag-reorder in parallel; Wave 3: UAT checkpoint); all LIB-01–04 covered; verification passed
+2026-04-24 — Phase 8.1 inserted (URGENT): Transport Controls and LCD Display — gap discovered post-Phase 8; transport buttons/LCD/seek bar/sliders missing from original roadmap; 4 new requirements (CTRL-01–04) added; directory created at .planning/phases/08.1-transport-controls-and-lcd-display/
+2026-04-24 — Phase 8.1 UI-SPEC approved: transport controls and LCD display design contract complete; 6/6 dimensions PASS (typography FLAG non-blocking — 8pt/9pt 1pt diff intentional, Winamp-faithful); LCD green on black established as focal point; Winamp absolute coords locked as exceptions
+2026-04-24 — Phase 8.1 planned: 3 plans in 2 waves (Wave 1: ManzoLCDView+SeekBar+Slider + ManzoTransportButton+prev() in parallel; Wave 2: ManzoRootView layout methods + AppDelegate wiring + xcodebuild verify); all CTRL-01–04 covered; verification passed
