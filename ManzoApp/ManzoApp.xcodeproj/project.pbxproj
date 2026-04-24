@@ -14,14 +14,18 @@
 		4A30B488419E416CDDA65738 /* ManzoVisualStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */; };
 		56D6897176EC8070696391FD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB29267B5851BABE6CA438B /* AppDelegate.swift */; };
 		5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */; };
+		69022C797BD4D01EC2E0D81C /* ManzoLCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82B30363232BE88392A72CC7 /* ManzoLCDView.swift */; };
 		7020B1D17A75D2BC5BE32628 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6B875FD042952670DACEE80 /* Metal.framework */; };
-		05ADD9138FAC47C196EDFF14 /* PlaylistManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F803ACFF46E542BFA25AD79F /* PlaylistManager.swift */; };
 		8106CFB6302A1904E2CC73F1 /* PlaylistTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */; };
+		92C66BB73A9E226356B3EA03 /* PlaylistManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E065D3297D23D9AB54A72798 /* PlaylistManager.swift */; };
 		B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */; };
 		BB8CFD76611D53169E6CFAF5 /* ManzoRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFAB0F804C124176548400A /* ManzoRootView.swift */; };
+		D1E0BF28C701D6155E9C1BE6 /* ManzoSeekBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB8C035B51D4E152E0D0ABA /* ManzoSeekBar.swift */; };
+		DCAD3F60308568CCB0E6CE21 /* ManzoTransportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D6F096C8119AB79E117355 /* ManzoTransportButton.swift */; };
 		EB588AE6BB7883118C156855 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97DD12C03C895AB63667BAC7 /* MetalKit.framework */; };
 		EF617FDF838CD8ABAD400DDD /* PlaylistRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */; };
 		F0E005EBA678872CBD98A034 /* Spectrum.metal in Sources */ = {isa = PBXBuildFile; fileRef = EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */; };
+		F24F6210D1607761F6E61C6A /* ManzoSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E80C27FFDCA368367506C3 /* ManzoSlider.swift */; };
 		F6C246C01CA14DC04C9DCB10 /* NeoAeroLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE7A676193ACE6692A91733F /* NeoAeroLayer.swift */; };
 		FC525C678EF26AE43BC89CE4 /* ManzoSpectrumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9538E522FF417595DFD591FA /* ManzoSpectrumView.swift */; };
 /* End PBXBuildFile section */
@@ -29,19 +33,23 @@
 /* Begin PBXFileReference section */
 		1EB5F2C7136193BE0BC04FAB /* ManzoApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ManzoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoPlaylistPanel.swift; sourceTree = "<group>"; };
+		54D6F096C8119AB79E117355 /* ManzoTransportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoTransportButton.swift; sourceTree = "<group>"; };
 		5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRowView.swift; sourceTree = "<group>"; };
+		82B30363232BE88392A72CC7 /* ManzoLCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoLCDView.swift; sourceTree = "<group>"; };
 		8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoVisualStyle.swift; sourceTree = "<group>"; };
 		8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
-		F803ACFF46E542BFA25AD79F /* PlaylistManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistManager.swift; sourceTree = "<group>"; };
+		8CB8C035B51D4E152E0D0ABA /* ManzoSeekBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoSeekBar.swift; sourceTree = "<group>"; };
 		945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistTrack.swift; sourceTree = "<group>"; };
 		9538E522FF417595DFD591FA /* ManzoSpectrumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoSpectrumView.swift; sourceTree = "<group>"; };
 		97DD12C03C895AB63667BAC7 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		AE7A676193ACE6692A91733F /* NeoAeroLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeoAeroLayer.swift; sourceTree = "<group>"; };
 		C6B875FD042952670DACEE80 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ManzoApp-Bridging-Header.h"; sourceTree = "<group>"; };
+		D0E80C27FFDCA368367506C3 /* ManzoSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoSlider.swift; sourceTree = "<group>"; };
 		D72C417C7828CF419FE9EAB8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		E065D3297D23D9AB54A72798 /* PlaylistManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistManager.swift; sourceTree = "<group>"; };
 		EB24B5754794121E0EF03F74 /* ManzoWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoWindow.swift; sourceTree = "<group>"; };
 		EEFAB0F804C124176548400A /* ManzoRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoRootView.swift; sourceTree = "<group>"; };
 		EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Spectrum.metal; sourceTree = "<group>"; };
@@ -93,13 +101,17 @@
 				F48C620D8FA3FA52946B7FA1 /* Info.plist */,
 				D72C417C7828CF419FE9EAB8 /* main.swift */,
 				C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */,
+				82B30363232BE88392A72CC7 /* ManzoLCDView.swift */,
 				42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */,
 				EEFAB0F804C124176548400A /* ManzoRootView.swift */,
+				8CB8C035B51D4E152E0D0ABA /* ManzoSeekBar.swift */,
+				D0E80C27FFDCA368367506C3 /* ManzoSlider.swift */,
 				9538E522FF417595DFD591FA /* ManzoSpectrumView.swift */,
+				54D6F096C8119AB79E117355 /* ManzoTransportButton.swift */,
 				8BCF81350C6A8CCFA985E468 /* ManzoVisualStyle.swift */,
 				EB24B5754794121E0EF03F74 /* ManzoWindow.swift */,
 				AE7A676193ACE6692A91733F /* NeoAeroLayer.swift */,
-				F803ACFF46E542BFA25AD79F /* PlaylistManager.swift */,
+				E065D3297D23D9AB54A72798 /* PlaylistManager.swift */,
 				7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */,
 				945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */,
 				EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */,
@@ -195,13 +207,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				56D6897176EC8070696391FD /* AppDelegate.swift in Sources */,
+				69022C797BD4D01EC2E0D81C /* ManzoLCDView.swift in Sources */,
 				35DB761CA4282A86B0447E3C /* ManzoPlaylistPanel.swift in Sources */,
 				BB8CFD76611D53169E6CFAF5 /* ManzoRootView.swift in Sources */,
+				D1E0BF28C701D6155E9C1BE6 /* ManzoSeekBar.swift in Sources */,
+				F24F6210D1607761F6E61C6A /* ManzoSlider.swift in Sources */,
 				FC525C678EF26AE43BC89CE4 /* ManzoSpectrumView.swift in Sources */,
+				DCAD3F60308568CCB0E6CE21 /* ManzoTransportButton.swift in Sources */,
 				4A30B488419E416CDDA65738 /* ManzoVisualStyle.swift in Sources */,
 				2CF6D15A8144F531EB7427E4 /* ManzoWindow.swift in Sources */,
 				F6C246C01CA14DC04C9DCB10 /* NeoAeroLayer.swift in Sources */,
-				05ADD9138FAC47C196EDFF14 /* PlaylistManager.swift in Sources */,
+				92C66BB73A9E226356B3EA03 /* PlaylistManager.swift in Sources */,
 				EF617FDF838CD8ABAD400DDD /* PlaylistRowView.swift in Sources */,
 				8106CFB6302A1904E2CC73F1 /* PlaylistTrack.swift in Sources */,
 				F0E005EBA678872CBD98A034 /* Spectrum.metal in Sources */,

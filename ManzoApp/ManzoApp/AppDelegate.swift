@@ -172,7 +172,7 @@ import AppKit
         let bar = ManzoSeekBar(frame: NSRect(x: 16, y: 72, width: 248, height: 10))
         bar.onSeek = { [weak self] t in
             guard let self = self, let handle = self.manzoHandle else { return }
-            manzo_seek(handle, t)
+            manzo_seek(handle, UInt64(t * 1000))
             NSLog("MANZO Phase 8.1: ManzoSeekBar.onSeek — seeking to %.2f", t)
         }
         rootView.addSeekBar(bar)
@@ -185,12 +185,12 @@ import AppKit
         volSlider.value    = 200   // sensible default ~78%
         volSlider.onValueChanged = { [weak self] v in
             guard let self = self, let handle = self.manzoHandle else { return }
-            manzo_set_volume(handle, UInt32(v))
+            manzo_set_volume(handle, v / 255.0)
         }
         rootView.addVolumeSlider(volSlider)
         volumeSlider = volSlider
         // Apply initial volume so audio matches slider position
-        if let handle = manzoHandle { manzo_set_volume(handle, UInt32(volSlider.value)) }
+        if let handle = manzoHandle { manzo_set_volume(handle, volSlider.value / 255.0) }
 
         // Pan slider: x=177, y=57, 38×13, range -127 to +127, default 0 (center) (D-08)
         let panSl = ManzoSlider(frame: NSRect(x: 177, y: 57, width: 38, height: 13))
@@ -199,7 +199,7 @@ import AppKit
         panSl.value    =    0   // center
         panSl.onValueChanged = { [weak self] v in
             guard let self = self, let handle = self.manzoHandle else { return }
-            manzo_set_pan(handle, Int32(v))
+            manzo_set_pan(handle, v / 127.0)
         }
         rootView.addPanSlider(panSl)
         panSlider = panSl
@@ -698,7 +698,7 @@ extension AppDelegate {
         let elapsed = manzoHandle.map { Double(manzo_get_position($0)) } ?? 0
         if elapsed > 2.0 {
             if let handle = manzoHandle {
-                manzo_seek(handle, 0.0)
+                manzo_seek(handle, 0)
                 NSLog("MANZO Phase 8.1: handlePrevButton — elapsed=%.1f > 2s, restarting track", elapsed)
             }
         } else {
