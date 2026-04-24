@@ -199,7 +199,11 @@ class ManzoSpectrumView: MTKView {
         //    manzo_get_spectrum writes 75 floats into fftBuffer.contents() in normalized [0.0, 1.0].
         //    On Apple Silicon: this is a plain ARM STORE into unified physical RAM — no copy (SPEC-02).
         let fftPtr = fftBuffer.contents().assumingMemoryBound(to: Float.self)
-        manzo_get_spectrum(manzoHandle, fftPtr, 75)
+        // Guard nil handle: AppDelegate nils this before manzo_close, so no dangling-pointer access.
+        if let handle = manzoHandle {
+            manzo_get_spectrum(handle, fftPtr, 75)
+        }
+        // If handle is nil: fftBuffer keeps its last values; peaks decay to zero naturally.
 
         // 2. Update peak-hold state (D-15: snap up immediately if fft > peak, else accelerating decay).
         //    Winamp draw_sa.cpp: t_vx[x] *= spfo; t_bx[x] -= (int)t_vx[x]

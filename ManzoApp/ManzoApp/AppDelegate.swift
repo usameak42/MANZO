@@ -154,6 +154,10 @@ import AppKit
 
         NSLog("MANZO Phase 3: track ended (state=4) — advancing queue")
 
+        // Nil spectrum handle FIRST so the render loop skips manzo_get_spectrum on its next
+        // fire — prevents EXC_BAD_ACCESS from calling into a freed Rust object.
+        spectrumView?.manzoHandle = nil
+
         // Close the current handle BEFORE opening the next one to avoid two cpal streams alive
         // simultaneously (cpal default device only supports one output stream at a time on macOS).
         manzo_close(handle)
@@ -165,6 +169,7 @@ import AppKit
             NSLog("MANZO Phase 3: queue exhausted (\(currentTrackIndex)/\(trackQueue.count)) — stopping poll timer")
             pollTimer?.invalidate()
             pollTimer = nil
+            spectrumView?.stopRenderLoop()
             return
         }
 
@@ -173,6 +178,7 @@ import AppKit
             NSLog("MANZO Phase 3: next track not found at \(nextPath) — stopping poll timer")
             pollTimer?.invalidate()
             pollTimer = nil
+            spectrumView?.stopRenderLoop()
             return
         }
 
@@ -181,10 +187,13 @@ import AppKit
             NSLog("MANZO Phase 3: manzo_open returned null for next track \(nextPath) — stopping poll timer")
             pollTimer?.invalidate()
             pollTimer = nil
+            spectrumView?.stopRenderLoop()
             return
         }
         let playResult = manzo_play(nextHandle)
         NSLog("MANZO Phase 3: auto-advance to \(nextPath) — play result: \(playResult)")
+        // Re-wire spectrum handle to new track so manzo_get_spectrum reads from the live decoder.
+        spectrumView?.manzoHandle = nextHandle
     }
 
     // MARK: - Menu
