@@ -196,7 +196,15 @@ final class ManzoPlaylistPanel: NSPanel {
         tableView.doubleAction = #selector(handleDoubleClick(_:))
         tableView.target = self
 
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupTableView — NSTableView 18pt rows, no header")
+        // Register drop destination for drag-reorder. NSPasteboardItem with .string type
+        // encodes the source row index as a String (pasteboardWriterForRow in AppDelegate 08-03).
+        // validateDrop + acceptDrop are implemented in AppDelegate (Plan 08-03).
+        tableView.registerForDraggedTypes([.string])
+        tableView.setDraggingSourceOperationMask([.move], forLocal: true)
+
+        setupContextMenu()
+
+        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupTableView — NSTableView 18pt rows, no header, drag-reorder registered")
     }
 
     // MARK: - Empty State (UI-SPEC Empty State section)
