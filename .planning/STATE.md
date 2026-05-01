@@ -39,7 +39,8 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 | 7 | Spectrum Analyzer | Complete (3/3) | 3 |
 | 8 | Playlist & Library | Ready to execute (5/5) | 5 |
 | 8.1 | Transport Controls and LCD Display | Superseded — Claude Design handoff pending | 3 |
-| 9 | Online Streaming | Not Started | 0 |
+| 9 | Complete UI Rewrite | In Progress | 0 |
+| 10 | Online Streaming | Not Started | 0 |
 
 **Progress:** [██████░░░░] 67% (6/9 phases complete)
 
@@ -92,6 +93,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ### Roadmap Evolution
 
 - Phase 8.1 inserted after Phase 8: Transport Controls and LCD Display (URGENT) — LCD display, transport buttons, seek bar, and volume/pan sliders were absent from the original roadmap; the audio FFI exists but no UI layer was ever specified. 4 new requirements added: CTRL-01–04.
+- Phase 9 added: Complete UI Rewrite — pixel-accurate reimplementation of all Swift UI files to match the MANZO design system HTML spec (manzo_ui_kit.html); replaces the superseded Phase 8.1 visual layer with a ground-up rewrite covering main window, playlist, and EQ windows. Phase 10 is Online Streaming (renumbered from 9).
 
 ---
 
@@ -107,9 +109,17 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ---
 
+## Quick Tasks Completed
+
+| Date | Slug | Description |
+|------|------|-------------|
+| 2026-05-01 | manzoeqpanel-sdk26-fixes | Fix 3 ManzoEQPanel.swift macOS 26 SDK compile errors (NSView.tag get-only, CGColor.copy(alpha:) removed) |
+
+---
+
 ## Last Activity
 
-2026-04-20 — Project initialized, roadmap created (9 phases, 32 requirements mapped)
+2026-05-01 — ManzoEQPanel.swift wired in AppDelegate; macOS 26 SDK compile errors fixed; clean build green
 2026-04-20 — Phase 1 complete: Rust staticlib + cbindgen FFI bridge + Xcode wiring verified
 2026-04-22 — Phase 2 complete: mpg123-sys + cpal float32 pipeline; audible playback confirmed
 2026-04-22 — Phase 3 complete: playback state machine, gapless 529-sample trim (divisor fixed), Swift auto-advance; UAT 5/5 passed; code review fixes applied (WR-01–04)

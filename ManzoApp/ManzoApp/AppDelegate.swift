@@ -18,32 +18,28 @@ import AppKit
     // Phase 3 (D-05 / AUDIO-05): polling timer — kept, wired to PlaylistManager.next() in Phase 8.
     private var pollTimer: Timer? = nil
 
-    // Phase 5: retain the window for the app's lifetime.
-    // ARC would deallocate a window stored only in a local var on the next runloop cycle.
-    private var manzoWindow: ManzoWindow? = nil
-
-    // Phase 6: retained ManzoVisualStyle — loaded from UserDefaults in applicationDidFinishLaunching.
-    // AppDelegate owns the current style per D-10.
-    private var visualStyle: ManzoVisualStyle = .default
-
-    // Phase 7: retained spectrum view — initialized in applicationDidFinishLaunching.
-    private var spectrumView: ManzoSpectrumView? = nil
+    // Phase 9: retain the window for the app's lifetime.
+    private var manzoWindow: NSWindow? = nil
 
     // Phase 8: PlaylistManager replaces trackQueue/currentTrackIndex (D-12).
     private var playlistManager:   PlaylistManager    = PlaylistManager()
     // Phase 8: ManzoPlaylistPanel — retained reference prevents ARC deallocation.
     private var playlistPanel:     ManzoPlaylistPanel? = nil
+    // EQ panel — retained reference prevents ARC deallocation.
+    private var eqPanel:           ManzoEQPanel?       = nil
     // Phase 8: PL toggle button — retained so AppDelegate can update active/inactive appearance.
     private var plButton:          NSButton?          = nil
     // Phase 8: last known main window origin — used to compute delta for co-move (D-03).
     private var lastMainWindowOrigin: NSPoint         = .zero
 
-    // Phase 8.1: retained view references — prevent ARC deallocation between poll ticks.
-    private var lcdView:         ManzoLCDView?         = nil
-    private var seekBar:         ManzoSeekBar?          = nil
-    private var volumeSlider:    ManzoSlider?           = nil
-    private var panSlider:       ManzoSlider?           = nil
-    private var playPauseButton: ManzoTransportButton?  = nil
+    // Phase 9: direct refs to ManzoMainWindow's LCD components
+    private var lcdLabel:    LCDLabel?       = nil
+    private var marqueeView: MarqueeView?    = nil
+    private var specsLabel:  NSTextField?    = nil
+    private var statusbarView: ManzoStatusbar? = nil
+    private var seekBarView: SeekBar?        = nil
+    private var analyzerView: SpectrumView?  = nil
+    private var currentDuration: Double      = 0
 
     // MARK: - NSApplicationDelegate
 
@@ -66,11 +62,6 @@ import AppKit
                 let playResult = manzo_play(manzoHandle!)
                 if playResult == 0 {
                     NSLog("MANZO Phase 8: playback started — \(firstTrack.path)")
-                    if let sv = spectrumView {
-                        sv.manzoHandle = manzoHandle
-                        sv.startRenderLoop()
-                        NSLog("MANZO Phase 7: spectrum render loop started")
-                    }
                 } else {
                     NSLog("MANZO Phase 8: manzo_play failed with code \(playResult)")
                 }
@@ -90,209 +81,117 @@ import AppKit
             NSLog("MANZO Phase 8: first track path not found on disk — skipping playback")
         }
 
-        // MARK: Phase 5 / Phase 6 — window setup + Neo-Aero style application
-        // D-04 (Phase 5): isOpaque=false and backgroundColor=.clear set inside ManzoWindow.init()
-        //                 before this call — already correct for compositor.
-        // D-10 (Phase 6): ManzoVisualStyle loaded and applied before contentView assignment.
-        let window   = ManzoWindow()
-        let rootView = ManzoRootView(frame: window.frame)
+        // MARK: Phase 9 — ManzoMainWindow
+        let win = ManzoMainWindow()
+        win.center()
+        win.makeKeyAndOrderFront(nil)
+        win.setFrameAutosaveName("ManzoMainWindow")
+        manzoWindow = win
+        eqPanel = ManzoEQPanel()
+        eqPanel?.onBandChanged = { [weak self] gains, preamp in
+            guard let handle = self?.manzoHandle else { return }
+            var g = gains
+            g.withUnsafeBufferPointer { ptr in
+                manzo_set_eq(handle, ptr.baseAddress, preamp)
+            }
+        }
+        NSLog("MANZO Phase 9: ManzoMainWindow ordered front — 275×116pt")
 
-        // Phase 6 (D-10): load persisted style (or default on first launch) and apply Neo-Aero chrome.
-        visualStyle = ManzoVisualStyle.load()
-        rootView.applyStyle(visualStyle)
-        NSLog("MANZO Phase 6: ManzoVisualStyle loaded and applied — layout=%@, theme=%@, wetFloor=%d",
-              visualStyle.panelLayout.rawValue, visualStyle.colorTheme.rawValue,
-              visualStyle.wetFloor ? 1 : 0)
+        // MARK: Phase 9 wiring — connect ManzoMainWindow components to existing FFI handlers
+        if let winView = win.contentView as? ManzoMainWindowView {
+            let body = winView.body
 
-        window.contentView = rootView
-        window.center()
-        window.orderFront(nil)
-        // D-12: single call — AppKit saves frame on move and restores on next launch automatically.
-        // Must be called AFTER orderFront so AppKit can match the autosave name to the visible window.
-        window.setFrameAutosaveName("ManzoMainWindow")
-        manzoWindow = window   // retain: prevent ARC deallocation
-        NSLog("MANZO Phase 5: window ordered front — 275×116 pt frameless, autosave=ManzoMainWindow")
+            // LCD: wire native components for time/title/specs updates
+            lcdLabel      = body.lcd
+            marqueeView   = body.marquee
+            specsLabel    = body.specs
+            statusbarView = winView.statusbar
+            seekBarView   = body.seek
+            analyzerView  = body.analyzer
+            analyzerView?.manzoHandle = manzoHandle  // non-nil if track auto-started before window
 
-        // MARK: Phase 7 — Spectrum analyzer setup (CHK-02: after orderFront so bodyView has screen context)
-        let spectrum = ManzoSpectrumView()
-        rootView.addSpectrumView(spectrum)
-        spectrumView = spectrum
-        NSLog("MANZO Phase 7: ManzoSpectrumView created and added to bodyView")
+            body.seek.onSeek = { [weak self] ratio in
+                guard let self, let h = self.manzoHandle else { return }
+                let ms = UInt64(ratio * self.currentDuration * 1000)
+                manzo_seek(h, ms)
+            }
 
-        if let handle = manzoHandle {
-            spectrum.manzoHandle = handle
-            spectrum.startRenderLoop()
-            NSLog("MANZO Phase 7: CADisplayLink render loop started — manzoHandle wired")
+            // VOL/BAL: fire existing FFI calls on drag
+            body.volSlider.onValueChanged = { [weak self] v in
+                guard let handle = self?.manzoHandle else { return }
+                manzo_set_volume(handle, Float(v))
+            }
+            body.balSlider.onValueChanged = { [weak self] v in
+                guard let handle = self?.manzoHandle else { return }
+                manzo_set_pan(handle, Float(v * 2 - 1))   // 0..1 → -1..+1
+            }
+
+            // Transport: point onTap to existing AppDelegate handlers
+            body.play.onTap  = { [weak self] in self?.handlePlayPauseButton() }
+            body.pause.onTap = { [weak self] in self?.handlePlayPauseButton() }
+            body.prev.onTap  = { [weak self] in self?.handlePrevButton() }
+            body.stop.onTap  = { [weak self] in
+                guard let handle = self?.manzoHandle else { return }
+                manzo_stop(handle)
+            }
+            body.next.onTap  = { [weak self] in
+                guard let self = self else { return }
+                guard let _ = self.playlistManager.next() else { return }
+                self.jumpToTrack(at: self.playlistManager.currentIndex)
+            }
+            body.eject.onTap = { [weak self] in self?.openFilePicker() }
+
+            // PL toggle: show/hide playlist panel
+            body.plBtn.onToggle = { [weak self] isOn in
+                guard let self else { return }
+                if isOn { self.playlistPanel?.makeKeyAndOrderFront(nil) }
+                else     { self.playlistPanel?.orderOut(nil) }
+            }
+            body.eqBtn.onToggle = { [weak self] isOn in
+                if isOn { self?.eqPanel?.makeKeyAndOrderFront(nil) }
+                else     { self?.eqPanel?.orderOut(nil) }
+            }
         }
 
-        // MARK: Phase 8 — Playlist panel + PL button setup
+        // MARK: Phase 8 — Playlist panel
         let panel = ManzoPlaylistPanel()
         panel.playlistDelegate = self
-        // Set NSTableView data source and delegate.
         panel.tableView.dataSource = self
         panel.tableView.delegate   = self
-        // Register for drag-reorder (required before dragging works).
         panel.tableView.registerForDraggedTypes([.string])
         panel.tableView.setDraggingSourceOperationMask(.move, forLocal: true)
-        // Position panel below main window (D-01).
-        let mainOrigin = window.frame.origin
+        let mainOrigin = win.frame.origin
         let panelHeight = panel.frame.height
         panel.setFrameOrigin(NSPoint(x: mainOrigin.x, y: mainOrigin.y - panelHeight))
         lastMainWindowOrigin = mainOrigin
-        // isOpaque=false + backgroundColor=.clear already set in ManzoPlaylistPanel.init().
-        // setFrameAutosaveName AFTER orderFront (Phase 5 D-12 pattern).
         panel.orderFront(nil)
         panel.setFrameAutosaveName("ManzoPlaylistPanel")
-        playlistPanel = panel   // retain reference
+        playlistPanel = panel
 
-        // PL button: 20×12 pt in statusView, trailing-8pt (D-02, UI-SPEC).
-        let plBtn = makePLButton()
-        rootView.addPLButton(plBtn)
-        plButton = plBtn
         updatePLButtonAppearance()
-
-        // Update initial track count display.
         panel.updateTrackCount(playlistManager.tracks.count)
         panel.tableView.reloadData()
         panel.setEmptyStateVisible(playlistManager.tracks.isEmpty)
 
-        // Co-move: fire on every mouseDragged event in ManzoWindow so panel follows in real time.
-        // Replaces NSWindow.didMoveNotification which fires too infrequently (UAT fix, issue 3).
-        window.onWindowMoved = { [weak self] in self?.handleMainWindowMoved() }
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel created — position below main window, co-move armed")
-
-        // MARK: Phase 8.1 — Transport Controls + LCD Display
-
-        // ManzoLCDView: full width, y=14, height=43 (D-04)
-        let lcd = ManzoLCDView(frame: .zero)
-        rootView.addLCDView(lcd)
-        lcdView = lcd
-
-        // ManzoSeekBar: x=16, y=72, 248×10 (D-07)
-        let bar = ManzoSeekBar(frame: NSRect(x: 16, y: 72, width: 248, height: 10))
-        bar.onSeek = { [weak self] t in
-            guard let self = self, let handle = self.manzoHandle else { return }
-            let tMs = UInt64(max(0, t) * 1000)   // clamp negative before UInt64 conversion (crash guard)
-            manzo_seek(handle, tMs)
-            NSLog("MANZO Phase 8.1: ManzoSeekBar.onSeek — seeking to %.2fs (%llu ms)", t, tMs)
-        }
-        rootView.addSeekBar(bar)
-        seekBar = bar
-
-        // Volume slider: x=107, y=57, 68×13, range 0–255 (D-08)
-        let volSlider = ManzoSlider(frame: NSRect(x: 107, y: 57, width: 68, height: 13))
-        volSlider.minValue = 0
-        volSlider.maxValue = 255
-        volSlider.value    = 200   // sensible default ~78%
-        volSlider.onValueChanged = { [weak self] v in
-            guard let self = self, let handle = self.manzoHandle else { return }
-            manzo_set_volume(handle, v / 255.0)
-        }
-        rootView.addVolumeSlider(volSlider)
-        volumeSlider = volSlider
-        // Apply initial volume so audio matches slider position
-        if let handle = manzoHandle { manzo_set_volume(handle, volSlider.value / 255.0) }
-
-        // Pan slider: x=177, y=57, 38×13, range -127 to +127, default 0 (center) (D-08)
-        let panSl = ManzoSlider(frame: NSRect(x: 177, y: 57, width: 38, height: 13))
-        panSl.minValue = -127
-        panSl.maxValue =  127
-        panSl.value    =    0   // center
-        panSl.onValueChanged = { [weak self] v in
-            guard let self = self, let handle = self.manzoHandle else { return }
-            // v in [-127, +127]; divide by 127.0 to map to [-1.0, +1.0].
-            // Range is symmetric [-127, +127] (not the Winamp [-128, +127] signed-byte convention).
-            // This is intentional: manzo_set_pan expects a symmetric float and the slider has no
-            // -128 step, so the left extreme correctly sends -1.0 and right extreme sends +1.0.
-            manzo_set_pan(handle, v / 127.0)
-        }
-        rootView.addPanSlider(panSl)
-        panSlider = panSl
-
-        // Transport buttons — 7 total (D-09)
-        // 4 wired + 3 placeholders. All created via ManzoTransportButton.
-
-        // Prev: x=16, y=88, 23×18 — smart prev logic (D-11)
-        let prevBtn = ManzoTransportButton(frame: NSRect(x: 16, y: 88, width: 23, height: 18))
-        prevBtn.label  = "⏮"
-        prevBtn.action = { [weak self] in self?.handlePrevButton() }
-        rootView.addTransportButton(prevBtn, x: 16, y: 88, width: 23, height: 18)
-
-        // Play/Pause: x=39, y=88, 23×18 — toggles based on manzo_get_state (D-10)
-        let ppBtn = ManzoTransportButton(frame: NSRect(x: 39, y: 88, width: 23, height: 18))
-        ppBtn.label  = "▶"
-        ppBtn.action = { [weak self] in self?.handlePlayPauseButton() }
-        rootView.addTransportButton(ppBtn, x: 39, y: 88, width: 23, height: 18)
-        playPauseButton = ppBtn   // retained: poll timer updates label
-
-        // Stop: x=62, y=88, 23×18
-        let stopBtn = ManzoTransportButton(frame: NSRect(x: 62, y: 88, width: 23, height: 18))
-        stopBtn.label  = "■"
-        stopBtn.action = { [weak self] in
-            guard let self = self, let handle = self.manzoHandle else { return }
-            manzo_stop(handle)
-            self.playPauseButton?.label = "▶"
-            NSLog("MANZO Phase 8.1: stop button pressed — manzo_stop called")
-        }
-        rootView.addTransportButton(stopBtn, x: 62, y: 88, width: 23, height: 18)
-
-        // Next: x=85, y=88, 23×18 — calls PlaylistManager.next() + jumpToTrack
-        let nextBtn = ManzoTransportButton(frame: NSRect(x: 85, y: 88, width: 23, height: 18))
-        nextBtn.label  = "⏭"
-        nextBtn.action = { [weak self] in
-            guard let self = self else { return }
-            guard let _ = self.playlistManager.next() else { return }
-            self.jumpToTrack(at: self.playlistManager.currentIndex)
-            NSLog("MANZO Phase 8.1: next button pressed — jumpToTrack at %d", self.playlistManager.currentIndex)
-        }
-        rootView.addTransportButton(nextBtn, x: 85, y: 88, width: 23, height: 18)
-
-        // Eject: x=136, y=89, 22×16 — opens file picker (wired)
-        let ejectBtn = ManzoTransportButton(frame: NSRect(x: 136, y: 89, width: 22, height: 16))
-        ejectBtn.label  = "⏏"
-        ejectBtn.action = { [weak self] in self?.openFilePicker() }
-        rootView.addTransportButton(ejectBtn, x: 136, y: 89, width: 22, height: 16)
-
-        // Shuffle placeholder: x=164, y=89, 47×15 — no-op
-        let shuffleBtn = ManzoTransportButton(frame: NSRect(x: 164, y: 89, width: 47, height: 15))
-        shuffleBtn.label  = "SHF"
-        shuffleBtn.action = { NSLog("MANZO Phase 8.1: shuffle pressed — no-op placeholder") }
-        rootView.addTransportButton(shuffleBtn, x: 164, y: 89, width: 47, height: 15)
-
-        // Repeat placeholder: x=210, y=89, 28×15 — no-op
-        let repeatBtn = ManzoTransportButton(frame: NSRect(x: 210, y: 89, width: 28, height: 15))
-        repeatBtn.label  = "REP"
-        repeatBtn.action = { NSLog("MANZO Phase 8.1: repeat pressed — no-op placeholder") }
-        rootView.addTransportButton(repeatBtn, x: 210, y: 89, width: 28, height: 15)
-
-        // Relocate spectrum to Winamp viz band (D-03): bodyView.topAnchor+43, 107×32 (left-aligned)
-        // Must be called AFTER addSpectrumView (which Phase 7 already called above)
-        rootView.relocateSpectrumView()
-
-        // Initialize LCD with current track if playlist has one
         if let track = playlistManager.trackAt(playlistManager.currentIndex) {
-            lcdView?.updateTrack(title: track.title ?? (track.path as NSString).lastPathComponent,
-                                 bitrate: 128, kHz: 44, stereo: true, duration: track.duration)
-        } else {
-            lcdView?.clearTrack()
+            let title = track.title ?? (track.path as NSString).lastPathComponent
+            marqueeView?.text = "★ \(playlistManager.currentIndex + 1). \(title)     "
+            specsLabel?.stringValue = "128 kbps · 44 khz · stereo"
         }
-
-        NSLog("MANZO Phase 8.1: all transport controls created and wired — LCD, SeekBar, Sliders×2, Buttons×7")
+        NSLog("MANZO Phase 8: PlaylistPanel configured — %d tracks", playlistManager.tracks.count)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         // Phase 3: stop the poll timer FIRST so it cannot fire after the handle is freed.
         pollTimer?.invalidate()
         pollTimer = nil
-        // Phase 7: stop render loop before releasing handle (loop reads handle).
-        spectrumView?.stopRenderLoop()
-
         // Phase 8 (D-11): final save on terminate (in addition to per-mutation autosave).
         playlistManager.save()
         NSLog("MANZO Phase 8: PlaylistManager.save() called in applicationWillTerminate")
 
         // Release Rust handle on app exit — manzo_close drops the Arc and stops cpal stream (T-02-09).
         if let handle = manzoHandle {
+            analyzerView?.manzoHandle = nil
             manzo_close(handle)
             manzoHandle = nil
         }
@@ -316,22 +215,23 @@ import AppKit
         guard state == MANZO_STATE_ENDED else {
             let position = Double(manzo_get_position(handle)) / 1000.0
             let duration = playlistManager.trackAt(playlistManager.currentIndex)?.duration ?? 0
+            currentDuration = duration
 
-            // Step 1: Update seek bar position (only when not dragging)
-            if let bar = seekBar, !bar.isDragging {
-                bar.duration = duration
-                bar.updateFill(position: position, duration: duration)
+            // Update LCDLabel time display
+            let m = Int(position) / 60, s = Int(position) % 60
+            lcdLabel?.stringValue = String(format: "%d:%02d", m, s)
+            // Update seek bar position (skip if user is dragging)
+            if let bar = seekBarView, !bar.isDragging {
+                bar.progress = CGFloat(duration > 0 ? position / duration : 0)
+                bar.needsDisplay = true
             }
-            // Step 2: Tick title scroll in LCD
-            lcdView?.tickTitleScroll()
-            // Step 3: Update LCD time display (elapsed or remaining based on toggle)
-            lcdView?.updateTime(position: position, duration: duration)
-            // Step 4: Update play/pause button label based on current state
+            // Update status bar
             if state == MANZO_STATE_PLAYING {
-                playPauseButton?.label = "⏸"
+                statusbarView?.setStatus("▶ Playing")
+            } else if state == MANZO_STATE_PAUSED {
+                statusbarView?.setStatus("⏸ Paused")
             } else {
-                // PAUSED (2), STOPPED (3) — both show ▶
-                playPauseButton?.label = "▶"
+                statusbarView?.setStatus("■ Stopped")
             }
             return
         }
@@ -340,8 +240,7 @@ import AppKit
         NSLog("MANZO Phase 8: track ended (state=4) — advancing via PlaylistManager.next()")
 
         // Phase 8 (D-15): use PlaylistManager.next() instead of raw array indexing.
-        // Nil spectrum + close-before-open pattern KEPT verbatim (Phase 3 constraint).
-        spectrumView?.manzoHandle = nil
+        analyzerView?.manzoHandle = nil
         manzo_close(handle)
         manzoHandle = nil
 
@@ -349,7 +248,6 @@ import AppKit
             NSLog("MANZO Phase 8: PlaylistManager exhausted — stopping poll timer")
             pollTimer?.invalidate()
             pollTimer = nil
-            spectrumView?.stopRenderLoop()
             // Reload table so active marker clears.
             playlistPanel?.tableView.reloadData()
             return
@@ -360,7 +258,6 @@ import AppKit
             NSLog("MANZO Phase 8: next track not found at \(nextPath) — stopping poll timer")
             pollTimer?.invalidate()
             pollTimer = nil
-            spectrumView?.stopRenderLoop()
             return
         }
 
@@ -369,19 +266,15 @@ import AppKit
             NSLog("MANZO Phase 8: manzo_open returned null for next track \(nextPath) — stopping poll timer")
             pollTimer?.invalidate()
             pollTimer = nil
-            spectrumView?.stopRenderLoop()
             return
         }
         let playResult = manzo_play(nextHandle)
+        analyzerView?.manzoHandle = nextHandle
         NSLog("MANZO Phase 8: auto-advance to \(nextPath) — play result: \(playResult)")
-        spectrumView?.manzoHandle = nextHandle
-        // Phase 8.1: update seek bar duration and LCD on auto-advance
         if let track = playlistManager.trackAt(playlistManager.currentIndex) {
-            seekBar?.duration = track.duration
-            lcdView?.updateTrack(
-                title: track.title ?? (track.path as NSString).lastPathComponent,
-                bitrate: 128, kHz: 44, stereo: true, duration: track.duration
-            )
+            let title = track.title ?? (track.path as NSString).lastPathComponent
+            marqueeView?.text = "★ \(playlistManager.currentIndex + 1). \(title)     "
+            specsLabel?.stringValue = "128 kbps · 44 khz · stereo"
         }
         // Reload to update active row marker.
         playlistPanel?.tableView.reloadData()
@@ -490,6 +383,17 @@ import AppKit
             return (envDir as NSString).appendingPathComponent("\(name).\(ext)")
         }
         return ""
+    }
+
+    private func addControl(_ view: NSView, to parent: NSView, top: CGFloat, leading: CGFloat, width: CGFloat, height: CGFloat) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        parent.addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: parent.topAnchor, constant: top),
+            view.leadingAnchor.constraint(equalTo: parent.leadingAnchor, constant: leading),
+            view.widthAnchor.constraint(equalToConstant: width),
+            view.heightAnchor.constraint(equalToConstant: height),
+        ])
     }
 
     // MARK: - Phase 8: Playlist Panel Toggle (D-02)
@@ -730,12 +634,10 @@ extension AppDelegate {
         let state = manzo_get_state(handle)
         if state == MANZO_STATE_PLAYING {
             manzo_pause(handle)
-            playPauseButton?.label = "▶"   // now paused → show play icon
             NSLog("MANZO Phase 8.1: handlePlayPauseButton — was PLAYING, now paused")
         } else {
             // PAUSED (2) or STOPPED (3)
             manzo_play(handle)
-            playPauseButton?.label = "⏸"  // now playing → show pause icon
             NSLog("MANZO Phase 8.1: handlePlayPauseButton — was PAUSED/STOPPED, now playing")
         }
     }
@@ -761,10 +663,9 @@ extension AppDelegate {
             } else {
                 // Stop playback.
                 if let handle = manzoHandle {
-                    spectrumView?.manzoHandle = nil
+                    analyzerView?.manzoHandle = nil
                     manzo_close(handle)
                     manzoHandle = nil
-                    spectrumView?.stopRenderLoop()
                 }
                 pollTimer?.invalidate()
                 pollTimer = nil
@@ -778,11 +679,9 @@ extension AppDelegate {
     func jumpToTrack(at index: Int) {
         guard let track = playlistManager.trackAt(index) else { return }
 
-        // Nil spectrum before close to prevent dangling handle access (Phase 7 fix pattern).
-        spectrumView?.manzoHandle = nil
-
         // Stop before close — prevents second cpal stream overlapping during track switch (UAT fix).
         if let handle = manzoHandle {
+            analyzerView?.manzoHandle = nil
             manzo_stop(handle)
             manzo_close(handle)
             manzoHandle = nil
@@ -801,22 +700,14 @@ extension AppDelegate {
             return
         }
         manzo_play(newHandle)
-        spectrumView?.manzoHandle = newHandle
+        analyzerView?.manzoHandle = newHandle
 
-        // Phase 8.1: update LCD display and seek bar duration when track changes
         if let track = playlistManager.trackAt(index) {
-            lcdView?.updateTrack(
-                title: track.title ?? (track.path as NSString).lastPathComponent,
-                bitrate: 128, kHz: 44, stereo: true, duration: track.duration
-            )
-            seekBar?.duration = track.duration
+            let title = track.title ?? (track.path as NSString).lastPathComponent
+            marqueeView?.text = "★ \(index + 1). \(title)     "
+            specsLabel?.stringValue = "128 kbps · 44 khz · stereo"
         }
 
-        // Restart render loop + poll timer if not running.
-        // startRenderLoop() is idempotent (guards renderSource == nil internally).
-        if let sv = spectrumView {
-            sv.startRenderLoop()
-        }
         if pollTimer == nil {
             pollTimer = Timer.scheduledTimer(timeInterval: 0.1, target: self,
                 selector: #selector(pollPlaybackState), userInfo: nil, repeats: true)
