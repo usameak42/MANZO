@@ -164,9 +164,9 @@ import AppKit
         let panelHeight = panel.frame.height
         panel.setFrameOrigin(NSPoint(x: mainOrigin.x, y: mainOrigin.y - panelHeight))
         lastMainWindowOrigin = mainOrigin
-        panel.orderFront(nil)
         panel.setFrameAutosaveName("ManzoPlaylistPanel")
         playlistPanel = panel
+        (win.contentView as? ManzoMainWindowView)?.body.plBtn.isOnState = false
 
         updatePLButtonAppearance()
         panel.updateTrackCount(playlistManager.tracks.count)
