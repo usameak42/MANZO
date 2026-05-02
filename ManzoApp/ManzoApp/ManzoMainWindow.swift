@@ -260,80 +260,48 @@ final class ManzoBodyView: NSView {
 
     override func layout() {
         super.layout()
-        // Top band (meta area): 14px from top (ends up ≈56 tall)
         let topBandH: CGFloat = 58
-        let padX: CGFloat = 8
-        let gap:  CGFloat = 8
+        let padX: CGFloat = 14
+        let gap:  CGFloat = 14
 
-        // LCD 64×topBandH (compressed for 275pt)
         lcd.frame = NSRect(x: padX, y: bounds.height - topBandH,
-                           width: 64, height: topBandH)
+                           width: 86, height: topBandH)
 
-        // Analyzer 70×32 on the right
-        let anaW: CGFloat = 70, anaH: CGFloat = 32
+        let anaW: CGFloat = 120, anaH: CGFloat = 32
         analyzer.frame = NSRect(x: bounds.width - padX - anaW,
                                 y: bounds.height - topBandH + (topBandH - anaH) / 2,
                                 width: anaW, height: anaH)
 
-        // Meta in middle: marquee / specs / seek
         let metaX = lcd.frame.maxX + gap
         let metaW = analyzer.frame.minX - gap - metaX
-        let metaTop = bounds.height - topBandH + topBandH - 4
+        let metaTop = bounds.height - 4
         marquee.frame = NSRect(x: metaX, y: metaTop - 18, width: metaW, height: 18)
         specs.frame   = NSRect(x: metaX, y: marquee.frame.minY - 14, width: metaW, height: 12)
-        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 8,   width: metaW, height: 10)
+        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 8,    width: metaW, height: 10)
 
-        // ─── Transport row — must fit within 275pt total ───
-        // Budget @ padX=8 each side: 275 - 16 = 259pt usable.
-        //  6 buttons × 22pt + 5 gaps × 1pt = 137pt
-        //  + 4pt spacer
-        //  + "vol" label (~14pt) + 4pt + 40pt slider = 58pt
-        //  + 4pt + "bal" label (~14pt) + 4pt + 28pt slider = 50pt
-        //  + 4pt + EQ 18pt + 2pt + PL 18pt = 42pt
-        //  Total: 137 + 4 + 58 + 50 + 42 = 291pt → trim further below.
-        //  Final tuned values keep total ≤ 259pt.
+        // Transport row — 24pt tall, 10pt from bottom of body
         let tY: CGFloat = 6
-        let btnH: CGFloat = 24
-        let btnW: CGFloat = 22
-        let btnGap: CGFloat = 1
         var x: CGFloat = padX
-
+        let btnW: CGFloat = 30, btnH: CGFloat = 24, btnGap: CGFloat = 6
         for btn in [prev, play, pause, stop, next, eject] {
             btn.frame = NSRect(x: x, y: tY, width: btnW, height: btnH)
             x += btnW + btnGap
         }
-        // After 6 buttons: x = 8 + 6*22 + 5*1 = 145
-
-        // Tiny spacer before VOL cluster
-        x += 4   // x = 149
-
-        // VOL label + slider (40pt)
+        // Spacer
+        x += 6
         volLabel.sizeToFit()
-        volLabel.frame = NSRect(x: x,
-                                y: tY + (btnH - volLabel.frame.height)/2,
-                                width: volLabel.frame.width,
-                                height: volLabel.frame.height)
-        x += volLabel.frame.width + 3
-        volSlider.frame = NSRect(x: x, y: tY + (btnH - 8)/2, width: 40, height: 8)
-        x += 40 + 4   // ~ x = 213
-
-        // BAL label + slider (24pt)
+        volLabel.frame.origin  = NSPoint(x: x, y: tY + (btnH - volLabel.frame.height)/2)
+        x += volLabel.frame.width + 6
+        volSlider.frame = NSRect(x: x, y: tY + (btnH - 8)/2, width: 64, height: 8)
+        x += 64 + 8
         balLabel.sizeToFit()
-        balLabel.frame = NSRect(x: x,
-                                y: tY + (btnH - balLabel.frame.height)/2,
-                                width: balLabel.frame.width,
-                                height: balLabel.frame.height)
-        x += balLabel.frame.width + 3
-        balSlider.frame = NSRect(x: x, y: tY + (btnH - 8)/2, width: 24, height: 8)
-        // x ≈ 250
-
-        // EQ / PL pills — right-aligned within 275pt window
-        let pillW: CGFloat = 18
-        let pillGap: CGFloat = 2
-        let plX  = bounds.width - padX - pillW
-        let eqX  = plX - pillGap - pillW
-        eqBtn.frame = NSRect(x: eqX, y: tY, width: pillW, height: btnH)
-        plBtn.frame = NSRect(x: plX, y: tY, width: pillW, height: btnH)
+        balLabel.frame.origin  = NSPoint(x: x, y: tY + (btnH - balLabel.frame.height)/2)
+        x += balLabel.frame.width + 6
+        balSlider.frame = NSRect(x: x, y: tY + (btnH - 8)/2, width: 40, height: 8)
+        x += 40 + 12
+        // EQ / PL pills
+        eqBtn.frame = NSRect(x: x, y: tY, width: 24, height: btnH);  x += 24 + 4
+        plBtn.frame = NSRect(x: x, y: tY, width: 24, height: btnH)
     }
 }
 
