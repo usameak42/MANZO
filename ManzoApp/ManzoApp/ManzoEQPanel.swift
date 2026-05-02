@@ -77,10 +77,14 @@ public final class ManzoEQPanel: NSPanel {
         set { eqView.onBandChanged = newValue }
     }
 
-    /// Stub for V2 preset menu.
     public var onPreset: ((String) -> Void)? {
         get { eqView.onPreset }
         set { eqView.onPreset = newValue }
+    }
+
+    public var onClose: (() -> Void)? {
+        get { eqView.onClose }
+        set { eqView.onClose = newValue }
     }
 
     public convenience init() {
@@ -99,7 +103,7 @@ public final class ManzoEQPanel: NSPanel {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = true
-        self.isMovableByWindowBackground = true
+        self.isMovableByWindowBackground = false
         self.titleVisibility = .hidden
         self.titlebarAppearsTransparent = true
         self.becomesKeyOnlyIfNeeded = true
@@ -117,7 +121,8 @@ public final class ManzoEQPanel: NSPanel {
 public final class ManzoEQView: NSView {
 
     // MARK: Geometry
-    public static let intrinsicSize = NSSize(width: 480, height: 168)
+    public static let titlebarH:   CGFloat = 14
+    public static let intrinsicSize = NSSize(width: 480, height: 182)
     private let padding   : CGFloat = 8
     private let topRowH   : CGFloat = 30
     private let gridH     : CGFloat = 110
@@ -127,6 +132,8 @@ public final class ManzoEQView: NSView {
     // MARK: State (gains in dB, range −12...+12)
     public private(set) var preamp: Float = 0.0
     public private(set) var gains:  [Float] = Array(repeating: 0.0, count: 10)
+
+    public var onClose: (() -> Void)?
 
     /// Hz labels in band order.
     public static let bandLabels: [String] =
@@ -146,6 +153,7 @@ public final class ManzoEQView: NSView {
     private var bandSliders: [VerticalDBSlider] = []
     private var bandLabelViews: [NSTextField] = []
     private let preampLabelView = NSTextField(labelWithString: "PRE")
+    private let titlebar = EQTitlebar()
 
     // MARK: Init
     public override init(frame: NSRect) {
@@ -154,6 +162,12 @@ public final class ManzoEQView: NSView {
         wantsLayer = true
         layer?.cornerRadius = cornerR
         layer?.masksToBounds = true
+
+        addSubview(titlebar)
+        titlebar.onClose = { [weak self] in
+            self?.window?.orderOut(nil)
+            self?.onClose?()
+        }
 
         addSubview(onBtn)
         addSubview(autoBtn)
@@ -218,9 +232,15 @@ public final class ManzoEQView: NSView {
         super.layout()
         let W = bounds.width
         let H = bounds.height
+        let tbH = ManzoEQView.titlebarH
+
+        titlebar.frame = NSRect(x: 0, y: H - tbH, width: W, height: tbH)
+
+        // Content area below titlebar
+        let contentH = H - tbH
 
         // Top row: ON · AUTO · curve · Presets
-        let topY = H - padding - topRowH
+        let topY = contentH - padding - topRowH
         var x = padding
         let ledW: CGFloat = 38
         onBtn.frame   = NSRect(x: x, y: topY, width: ledW, height: topRowH); x += ledW + 4
@@ -314,6 +334,46 @@ public final class ManzoEQView: NSView {
         let mono = NSFont.monospacedSystemFont(ofSize: 8.5, weight: .regular)
         tf.font = NSFont(name: "VT323", size: 11) ?? mono
         tf.textColor = color
+    }
+}
+
+// MARK: - Titlebar (14pt) -----------------------------------------------------
+
+private final class EQTitlebar: NSView {
+    private let close = TrafficLight(color: ManzoColor.tlRed)
+    private let mini  = TrafficLight(color: ManzoColor.tlYellow)
+    private let label = NSTextField(labelWithString: "EQUALIZER")
+    var onClose: (() -> Void)?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = EQColor.p3(1, 1, 1, 0.08).cgColor
+        [close, mini].forEach { addSubview($0) }
+        label.font = NSFont.systemFont(ofSize: 9, weight: .medium)
+        label.textColor = EQColor.fg3
+        label.alignment = .center
+        label.isBezeled = false; label.drawsBackground = false; label.isEditable = false
+        addSubview(label)
+        close.action = { [weak self] in self?.onClose?() }
+        mini.action  = { [weak self] in self?.window?.miniaturize(nil) }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
+    override func layout() {
+        super.layout()
+        let dotSize: CGFloat = 8
+        let y = (bounds.height - dotSize) / 2
+        close.frame = NSRect(x: 10,      y: y, width: dotSize, height: dotSize)
+        mini.frame  = NSRect(x: 10 + 14, y: y, width: dotSize, height: dotSize)
+        label.sizeToFit()
+        label.frame = NSRect(x: (bounds.width - label.bounds.width) / 2,
+                             y: (bounds.height - label.bounds.height) / 2,
+                             width: label.bounds.width, height: label.bounds.height)
     }
 }
 

@@ -12,12 +12,10 @@
 		48ACB43B09990F927D118BB8 /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */; };
 		56D6897176EC8070696391FD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB29267B5851BABE6CA438B /* AppDelegate.swift */; };
 		5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */; };
-		8106CFB6302A1904E2CC73F1 /* PlaylistTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */; };
 		92C66BB73A9E226356B3EA03 /* PlaylistManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E065D3297D23D9AB54A72798 /* PlaylistManager.swift */; };
 		B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */; };
 		C3E4F5D6B7A8C9E0F1D2B3A4 /* ManzoMainWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C2E3F4D5B6A7C8E9F0D1B2 /* ManzoMainWindow.swift */; };
 		D3E4F5A6B7C8D9E0F1A2B3C4 /* ManzoEQPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E2F3A4C5D6E7F8A9B0C1D2 /* ManzoEQPanel.swift */; };
-		EF617FDF838CD8ABAD400DDD /* PlaylistRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,9 +23,7 @@
 		42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoPlaylistPanel.swift; sourceTree = "<group>"; };
 		5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
-		7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRowView.swift; sourceTree = "<group>"; };
 		8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
-		945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistTrack.swift; sourceTree = "<group>"; };
 		A1C2E3F4D5B6A7C8E9F0D1B2 /* ManzoMainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoMainWindow.swift; sourceTree = "<group>"; };
 		B1E2F3A4C5D6E7F8A9B0C1D2 /* ManzoEQPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoEQPanel.swift; sourceTree = "<group>"; };
 		C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ManzoApp-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -81,8 +77,6 @@
 				B1E2F3A4C5D6E7F8A9B0C1D2 /* ManzoEQPanel.swift */,
 				42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */,
 				E065D3297D23D9AB54A72798 /* PlaylistManager.swift */,
-				7496B1E851A2E9B91A406A3D /* PlaylistRowView.swift */,
-				945DAB1EBBB1266F47A83A5E /* PlaylistTrack.swift */,
 			);
 			path = ManzoApp;
 			sourceTree = "<group>";
@@ -179,8 +173,6 @@
 				D3E4F5A6B7C8D9E0F1A2B3C4 /* ManzoEQPanel.swift in Sources */,
 				35DB761CA4282A86B0447E3C /* ManzoPlaylistPanel.swift in Sources */,
 				92C66BB73A9E226356B3EA03 /* PlaylistManager.swift in Sources */,
-				EF617FDF838CD8ABAD400DDD /* PlaylistRowView.swift in Sources */,
-				8106CFB6302A1904E2CC73F1 /* PlaylistTrack.swift in Sources */,
 				3DAF208BD04B15043D2BEECF /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

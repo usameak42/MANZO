@@ -1,417 +1,761 @@
+//
+//  ManzoPlaylistPanel.swift
+//  MANZO — Playlist Editor panel.
+//
+//  Drop-in, dependency-free. NSPanel (non-activating, utility-style) hosting
+//  ManzoPlaylistView. Width matches the main window (480pt). Height auto-fits
+//  with a sensible default; resize via the panel's `setContentSize(_:)`.
+//
+//  Visual reference: manzo_ui_kit.html — `.win.playlist` section.
+//  Maps to CSS classes: .win, .titlebar, .ptoolbar, .ghost, .sep,
+//      .prow, .prow--active, .prow--missing, .idx, .time, .statusbar.
+//
+//  Public API (AppDelegate-facing):
+//      var tracks: [PlaylistTrack]
+//      var currentIndex: Int
+//      func reloadData()
+//      var onTrackSelected: ((Int) -> Void)?
+//      var onAddTracks:     (() -> Void)?
+//      var onRemoveTracks:  (() -> Void)?
+//
+//  No FFI. No manzo_core import.
+//
 import AppKit
 
-// ManzoPlaylistPanel — the Playlist Editor floating panel (D-01).
-// Separate NSPanel from the main ManzoWindow: 275pt fixed width, vertically resizable.
-// Root contentView is a single .behindWindow vibrancy view — all inner panels are plain NSView.
-// All inner panels (titleView, bodyView, toolbarView) are plain NSView with wantsLayer=true.
-// NeoAero chrome applied via NeoAeroLayerFactory in bodyFocus mode (D-05).
+// MARK: - Track model ---------------------------------------------------------
 
-private let kPanelWidth:       CGFloat = 480   // match main window width
-private let kPanelInitHeight:  CGFloat = 116   // Winamp config_pe_height (CONTEXT.md D-01)
-private let kPanelMinHeight:   CGFloat = 60    // UI-SPEC: minimum usable height
-private let kPLTitleBarHeight: CGFloat = 16    // UI-SPEC: titleView height (16pt strip)
-private let kPLToolbarHeight:  CGFloat = 16    // UI-SPEC: toolbarView height (16pt strip)
+public struct PlaylistTrack {
+    public var title:    String      // e.g. "Bonobo — Black Sands"
+    public var duration: TimeInterval // seconds; <0 or .nan means unknown
+    public var isMissing: Bool        // file not found → strikethrough row
 
-final class ManzoPlaylistPanel: NSPanel {
-
-    // MARK: - Structural Views
-    let titleView   = NSView()
-    let bodyView    = NSView()
-    let toolbarView = NSView()
-
-    // MARK: - NSTableView
-    let tableView  = NSTableView()
-    let scrollView = NSScrollView()
-
-    // MARK: - Toolbar Controls
-    let addButton:      NSButton
-    let removeButton:   NSButton
-    let trackCountLabel: NSTextField
-
-    // MARK: - Empty State
-    private let emptyStateContainer = NSView()
-
-    // MARK: - Playlist delegate (set by AppDelegate in Plan 08-03)
-    // Cannot shadow NSWindow.delegate — use a distinct property name.
-    weak var playlistDelegate: ManzoPlaylistPanelDelegate? = nil
-
-    // MARK: - canBecomeKey / canBecomeMain
-
-    override var canBecomeKey:  Bool { true }
-    override var canBecomeMain: Bool { true }
-
-    // MARK: - Init
-
-    init() {
-        // Build toolbar controls before super.init (stored properties).
-        addButton    = ManzoPlaylistPanel.makeToolbarButton(label: "+", tooltip: "Add Files\u{2026}")
-        removeButton = ManzoPlaylistPanel.makeToolbarButton(label: "\u{2212}", tooltip: "Remove Selected Track")
-        trackCountLabel = ManzoPlaylistPanel.makeTrackCountLabel()
-
-        super.init(
-            contentRect: NSRect(x: 0, y: 0, width: kPanelWidth, height: kPanelInitHeight),
-            styleMask:   [.nonactivatingPanel, .resizable],
-            backing:     .buffered,
-            defer:       false
-        )
-
-        // D-04 (Phase 5 pattern): set before orderFront — compositor requirement.
-        isOpaque        = false
-        backgroundColor = .clear
-        hasShadow         = true
-        collectionBehavior = [.canJoinAllSpaces, .stationary]
-
-        // Lock width to 275 pt; height freely resizable (D-04).
-        minSize = NSSize(width: kPanelWidth, height: kPanelMinHeight)
-        maxSize = NSSize(width: kPanelWidth, height: CGFloat.greatestFiniteMagnitude)
-
-        // Corner radius 10 pt (UI-SPEC: matches main window).
-        contentView?.wantsLayer = true
-        contentView?.layer?.cornerRadius = 10
-        contentView?.layer?.masksToBounds = true
-
-        setupContentView()
-        setupTableView()
-        setupEmptyState()
-        setupToolbar()
-
-        // Initial state: show empty state (no tracks yet — AppDelegate wires data in 08-03).
-        setEmptyStateVisible(true)
-
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.init — 275×116pt panel, vertically resizable")
+    public init(title: String, duration: TimeInterval, isMissing: Bool = false) {
+        self.title = title
+        self.duration = duration
+        self.isMissing = isMissing
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) not used — code-only UI") }
-
-    // MARK: - Content View (single .behindWindow vibrancy root)
-
-    private func setupContentView() {
-        // Single root vibrancy view — inner panels are plain NSView only (CLAUDE.md: no nested vibrancy).
-        let root = NSVisualEffectView()
-        root.material     = .hudWindow   // TBD: replace with confirmed .glass when macOS 26 SDK name confirmed
-        root.blendingMode = .behindWindow
-        root.state        = .active
-        root.wantsLayer   = true
-        root.layer?.cornerRadius = 10
-        root.layer?.masksToBounds = true
-        root.layer?.backgroundColor = NSColor(
-            displayP3Red: 0.231, green: 0.231, blue: 0.231, alpha: 1.0
-        ).cgColor
-        contentView = root
-
-        for panel in [titleView, bodyView, toolbarView] {
-            panel.translatesAutoresizingMaskIntoConstraints = false
-            panel.wantsLayer = true
-            root.addSubview(panel)
-        }
-
-        NSLayoutConstraint.activate([
-            // titleView — top 16 pt strip (UI-SPEC Panel Layout)
-            titleView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            titleView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            titleView.topAnchor.constraint(equalTo: root.topAnchor),
-            titleView.heightAnchor.constraint(equalToConstant: kPLTitleBarHeight),
-
-            // toolbarView — bottom 16 pt strip (UI-SPEC Panel Layout)
-            toolbarView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            toolbarView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            toolbarView.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-            toolbarView.heightAnchor.constraint(equalToConstant: kPLToolbarHeight),
-
-            // bodyView — fills between title and toolbar (UI-SPEC Panel Layout)
-            bodyView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            bodyView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            bodyView.topAnchor.constraint(equalTo: titleView.bottomAnchor),
-            bodyView.bottomAnchor.constraint(equalTo: toolbarView.topAnchor),
-        ])
-
-        addTitleLabel(to: titleView)
-
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupContentView — titleView/bodyView/toolbarView constrained")
-    }
-
-    private func addTitleLabel(to view: NSView) {
-        let p3 = CGColorSpace(name: CGColorSpace.displayP3)!
-        let label = NSTextField(labelWithString: "PLAYLIST EDITOR")
-        label.font          = NSFont.systemFont(ofSize: 11)
-        label.textColor     = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.58, 0.60, 0.65, 1.0])!)!
-        label.alignment     = .center
-        label.isBezeled     = false
-        label.isEditable    = false
-        label.backgroundColor = .clear
-        label.drawsBackground = false
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            label.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-        ])
-    }
-
-    // titleView drag — mouseDown on titleView delegates to panel performDrag.
-    override func mouseDown(with event: NSEvent) {
-        let locInContent = contentView!.convert(event.locationInWindow, from: nil)
-        let titleFrame   = titleView.frame
-        if titleFrame.contains(locInContent) {
-            performDrag(with: event)
-        } else {
-            super.mouseDown(with: event)
-        }
-    }
-
-    // MARK: - NSTableView Setup
-
-    private func setupTableView() {
-        // NSScrollView pinned to all 4 bodyView edges (PATTERNS.md NSScrollView pattern).
-        scrollView.documentView          = tableView
-        scrollView.hasVerticalScroller   = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.drawsBackground       = false
-        scrollView.backgroundColor       = .clear
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        bodyView.addSubview(scrollView)
-
-        NSLayoutConstraint.activate([
-            scrollView.leadingAnchor.constraint(equalTo: bodyView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: bodyView.trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: bodyView.topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: bodyView.bottomAnchor),
-        ])
-
-        // NSTableView configuration (UI-SPEC NSTableView section).
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TrackColumn"))
-        column.width = kPanelWidth - 16  // 8 pt inset each side
-        tableView.addTableColumn(column)
-
-        tableView.headerView              = nil             // no column header (Winamp aesthetic)
-        tableView.rowHeight               = 24              // Winamp row height — 24 pt per UAT feedback
-        tableView.backgroundColor         = .clear
-        tableView.selectionHighlightStyle = .none           // custom selection via ManzoPlaylistRowBackground
-        tableView.gridStyleMask           = []              // disable system grid; PlaylistRowView draws separator
-        tableView.allowsMultipleSelection = false
-        tableView.allowsEmptySelection    = true
-        tableView.intercellSpacing        = NSSize(width: 0, height: 0)
-        tableView.usesAlternatingRowBackgroundColors = false
-
-        // Double-click to jump to track (D-14) — target set; AppDelegate becomes delegate in 08-03.
-        tableView.doubleAction = #selector(handleDoubleClick(_:))
-        tableView.target = self
-
-        // Register drop destination for drag-reorder. NSPasteboardItem with .string type
-        // encodes the source row index as a String (pasteboardWriterForRow in AppDelegate 08-03).
-        // validateDrop + acceptDrop are implemented in AppDelegate (Plan 08-03).
-        tableView.registerForDraggedTypes([.string])
-        tableView.setDraggingSourceOperationMask([.move], forLocal: true)
-
-        setupContextMenu()
-
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupTableView — NSTableView 18pt rows, no header, drag-reorder registered")
-    }
-
-    // MARK: - Empty State (UI-SPEC Empty State section)
-
-    private func setupEmptyState() {
-        let p3 = CGColorSpace(name: CGColorSpace.displayP3)!
-
-        emptyStateContainer.translatesAutoresizingMaskIntoConstraints = false
-        emptyStateContainer.wantsLayer = true
-        bodyView.addSubview(emptyStateContainer)
-
-        NSLayoutConstraint.activate([
-            emptyStateContainer.centerXAnchor.constraint(equalTo: bodyView.centerXAnchor),
-            emptyStateContainer.centerYAnchor.constraint(equalTo: bodyView.centerYAnchor),
-            emptyStateContainer.widthAnchor.constraint(equalTo: bodyView.widthAnchor, constant: -32),
-        ])
-
-        // Line 1: "No tracks" — 13 pt regular, P3(0.78, 0.80, 0.85, 0.70)
-        let headingLabel = NSTextField(labelWithString: "No tracks")
-        headingLabel.font       = NSFont.systemFont(ofSize: 13)
-        headingLabel.textColor  = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.78, 0.80, 0.85, 0.70])!)!
-        headingLabel.alignment  = .center
-        headingLabel.isBezeled  = false
-        headingLabel.isEditable = false
-        headingLabel.backgroundColor = .clear
-        headingLabel.drawsBackground = false
-        headingLabel.translatesAutoresizingMaskIntoConstraints = false
-        emptyStateContainer.addSubview(headingLabel)
-
-        // Line 2: "Add tracks with + or drag files here." — 11 pt regular, P3(0.78, 0.80, 0.85, 0.45)
-        let bodyLabel = NSTextField(labelWithString: "Add tracks with + or drag files here.")
-        bodyLabel.font       = NSFont.systemFont(ofSize: 11)
-        bodyLabel.textColor  = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.78, 0.80, 0.85, 0.45])!)!
-        bodyLabel.alignment  = .center
-        bodyLabel.isBezeled  = false
-        bodyLabel.isEditable = false
-        bodyLabel.backgroundColor = .clear
-        bodyLabel.drawsBackground = false
-        bodyLabel.lineBreakMode = .byWordWrapping
-        bodyLabel.translatesAutoresizingMaskIntoConstraints = false
-        emptyStateContainer.addSubview(bodyLabel)
-
-        NSLayoutConstraint.activate([
-            headingLabel.leadingAnchor.constraint(equalTo: emptyStateContainer.leadingAnchor),
-            headingLabel.trailingAnchor.constraint(equalTo: emptyStateContainer.trailingAnchor),
-            headingLabel.topAnchor.constraint(equalTo: emptyStateContainer.topAnchor),
-
-            bodyLabel.leadingAnchor.constraint(equalTo: emptyStateContainer.leadingAnchor),
-            bodyLabel.trailingAnchor.constraint(equalTo: emptyStateContainer.trailingAnchor),
-            bodyLabel.topAnchor.constraint(equalTo: headingLabel.bottomAnchor, constant: 4),
-            bodyLabel.bottomAnchor.constraint(equalTo: emptyStateContainer.bottomAnchor),
-        ])
-    }
-
-    // MARK: - Toolbar Setup (D-16)
-
-    private func setupToolbar() {
-        addButton.target    = self
-        addButton.action    = #selector(addButtonClicked(_:))
-        removeButton.target = self
-        removeButton.action = #selector(removeButtonClicked(_:))
-
-        addButton.translatesAutoresizingMaskIntoConstraints     = false
-        removeButton.translatesAutoresizingMaskIntoConstraints  = false
-        trackCountLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        toolbarView.addSubview(addButton)
-        toolbarView.addSubview(removeButton)
-        toolbarView.addSubview(trackCountLabel)
-
-        NSLayoutConstraint.activate([
-            // [+] button: 8 pt left inset, 24×16 pt (UI-SPEC toolbarView)
-            addButton.leadingAnchor.constraint(equalTo: toolbarView.leadingAnchor, constant: 8),
-            addButton.centerYAnchor.constraint(equalTo: toolbarView.centerYAnchor),
-            addButton.widthAnchor.constraint(equalToConstant: 24),
-            addButton.heightAnchor.constraint(equalToConstant: 16),
-
-            // [−] button: 4 pt gap after [+] (UI-SPEC toolbarView)
-            removeButton.leadingAnchor.constraint(equalTo: addButton.trailingAnchor, constant: 4),
-            removeButton.centerYAnchor.constraint(equalTo: toolbarView.centerYAnchor),
-            removeButton.widthAnchor.constraint(equalToConstant: 24),
-            removeButton.heightAnchor.constraint(equalToConstant: 16),
-
-            // Track count label: 8 pt right inset, right-aligned (UI-SPEC toolbarView)
-            trackCountLabel.trailingAnchor.constraint(equalTo: toolbarView.trailingAnchor, constant: -8),
-            trackCountLabel.centerYAnchor.constraint(equalTo: toolbarView.centerYAnchor),
-        ])
-
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupToolbar — [+]/[\u{2212}] buttons wired")
-    }
-
-    // MARK: - UI Updates
-
-    /// Update track count label and show/hide empty state.
-    /// Called by AppDelegate after mutations to PlaylistManager.
-    func updateTrackCount(_ count: Int) {
-        let p3      = CGColorSpace(name: CGColorSpace.displayP3)!
-        let dimColor = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.58, 0.60, 0.65, 1.0])!)!
-        let text = count == 1 ? "1 track" : "\(count) tracks"
-        trackCountLabel.attributedStringValue = NSAttributedString(
-            string: text,
-            attributes: [.foregroundColor: dimColor, .font: NSFont.systemFont(ofSize: 11)]
-        )
-        setEmptyStateVisible(count == 0)
-    }
-
-    /// Show or hide the empty state overlay (and correspondingly hide the table).
-    /// success_criteria: scrollView.isHidden = visible AND tableView.isHidden = visible (belt-and-suspenders).
-    func setEmptyStateVisible(_ visible: Bool) {
-        scrollView.isHidden          = visible     // hide the table when empty state is shown
-        tableView.isHidden           = visible     // belt-and-suspenders: hide tableView too
-        emptyStateContainer.isHidden = !visible    // show the overlay when empty
-    }
-
-    // MARK: - Actions (delegate wired by AppDelegate in Plan 08-03)
-
-    @objc private func addButtonClicked(_ sender: Any) {
-        playlistDelegate?.playlistPanelDidRequestAdd(self)
-    }
-
-    @objc private func removeButtonClicked(_ sender: Any) {
-        let row = tableView.selectedRow
-        guard row >= 0 else { return }
-        playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
-    }
-
-    /// T-08-06: guard row >= 0 prevents out-of-range delegate calls.
-    @objc func handleDoubleClick(_ sender: Any) {
-        let row = tableView.clickedRow
-        guard row >= 0 else { return }
-        playlistDelegate?.playlistPanel(self, didDoubleClickRow: row)
-    }
-
-    // MARK: - Keyboard: Delete key removal (D-13 path 1)
-
-    override func keyDown(with event: NSEvent) {
-        // Forward Delete only (Fn+Delete = 117). Plain Backspace (51) is a no-op.
-        if event.keyCode == 117 {
-            let row = tableView.selectedRow
-            guard row >= 0 else { return }
-            playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
-        } else {
-            super.keyDown(with: event)
-        }
-    }
-
-    // MARK: - Right-click context menu (D-13 path 2)
-
-    private func setupContextMenu() {
-        let menu = NSMenu()
-        let removeItem = NSMenuItem(
-            title:  "Remove from Playlist",
-            action: #selector(contextMenuRemove(_:)),
-            keyEquivalent: ""
-        )
-        removeItem.target = self
-        menu.addItem(removeItem)
-        tableView.menu = menu
-    }
-
-    @objc private func contextMenuRemove(_ sender: Any) {
-        // NSTableView.clickedRow is valid during right-click (before menu fires).
-        // T-08-15: guard row >= 0 prevents out-of-bounds action when no row is right-clicked.
-        let row = tableView.clickedRow
-        guard row >= 0 else { return }
-        playlistDelegate?.playlistPanel(self, didRequestRemoveAt: row)
-    }
-
-    // MARK: - Factory Helpers
-
-    private static func makeToolbarButton(label: String, tooltip: String) -> NSButton {
-        let p3       = CGColorSpace(name: CGColorSpace.displayP3)!
-        let dimColor = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.58, 0.60, 0.65, 1.0])!)!
-        let button   = NSButton()
-        button.bezelStyle  = .inline
-        button.isBordered  = false
-        button.toolTip     = tooltip
-        button.title       = ""
-        let attrs: [NSAttributedString.Key: Any] = [
-            .foregroundColor: dimColor,
-            .font: NSFont.systemFont(ofSize: 11),
-        ]
-        button.attributedTitle = NSAttributedString(string: label, attributes: attrs)
-        return button
-    }
-
-    private static func makeTrackCountLabel() -> NSTextField {
-        let p3       = CGColorSpace(name: CGColorSpace.displayP3)!
-        let dimColor = NSColor(cgColor: CGColor(colorSpace: p3, components: [0.58, 0.60, 0.65, 1.0])!)!
-        let label    = NSTextField(labelWithString: "0 tracks")
-        label.font          = NSFont.systemFont(ofSize: 11)
-        label.textColor     = dimColor
-        label.alignment     = .right
-        label.isBezeled     = false
-        label.isEditable    = false
-        label.backgroundColor = .clear
-        label.drawsBackground = false
-        return label
+    /// "M:SS" — or "−:−−" for missing/unknown.
+    public var durationString: String {
+        if isMissing || duration.isNaN || duration < 0 { return "−:−−" }
+        let total = Int(duration.rounded())
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 
-// MARK: - Delegate Protocol (wired by AppDelegate in Plan 08-03)
+// MARK: - P3 color tokens (mirror ManzoMainWindow.swift) ----------------------
 
-protocol ManzoPlaylistPanelDelegate: AnyObject {
-    func playlistPanelDidRequestAdd(_ panel: ManzoPlaylistPanel)
-    func playlistPanel(_ panel: ManzoPlaylistPanel, didRequestRemoveAt index: Int)
-    func playlistPanel(_ panel: ManzoPlaylistPanel, didDoubleClickRow row: Int)
+private enum PLColor {
+    static func p3(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> NSColor {
+        NSColor(displayP3Red: r, green: g, blue: b, alpha: a)
+    }
+    // Base (classic) — matches main window
+    static let baseTop      = p3(0.10, 0.10, 0.10)
+    static let baseBottom   = p3(0.23, 0.23, 0.23)
+    // Foreground
+    static let fg1          = p3(1, 1, 1)
+    static let fg2          = p3(0.78, 0.80, 0.85)
+    static let fg3          = p3(0.58, 0.60, 0.65)
+    // Selection / active row
+    static let selectionBlue  = p3(0.15, 0.45, 0.85, 0.70)
+    static let selectionBlueD = p3(0.10, 0.30, 0.60, 0.80)
+    // Missing-row text
+    static let missing      = p3(0.50, 0.52, 0.55, 0.75)
+    // Hover wash
+    static let hover        = p3(1, 1, 1, 0.03)
+    // Toolbar / ghost button
+    static let ghostBg      = p3(1, 1, 1, 0.04)
+    static let ghostBgHover = p3(1, 1, 1, 0.10)
+    static let toolbarBg    = p3(0, 0, 0, 0.20)
+    static let sep          = p3(1, 1, 1, 0.10)
+    static let rowBorder    = p3(1, 1, 1, 0.03)
+    // Chrome
+    static let rim          = p3(1, 1, 1, 0.45)
+    static let specTop      = p3(1, 1, 1, 0.50)
+    static let specMid      = p3(1, 1, 1, 0.08)
+    static let lowerGlow    = p3(1, 1, 1, 0.12)
+    // Title-/status-bar
+    static let titlebarBg   = p3(1, 1, 1, 0.08)
+    static let statusbarBg  = p3(0, 0, 0, 0.28)
+    // Traffic lights
+    static let tlRed    = p3(1.00, 0.38, 0.32)
+    static let tlYellow = p3(1.00, 0.78, 0.15)
+    static let tlGreen  = p3(0.32, 0.80, 0.30)
+}
+
+// MARK: - Panel ---------------------------------------------------------------
+
+public final class ManzoPlaylistPanel: NSPanel {
+
+    public let playlistView: ManzoPlaylistView
+
+    // Forwarded data + callbacks ------------------------------------------------
+    public var tracks: [PlaylistTrack] {
+        get { playlistView.tracks }
+        set { playlistView.tracks = newValue }
+    }
+    public var currentIndex: Int {
+        get { playlistView.currentIndex }
+        set { playlistView.currentIndex = newValue }
+    }
+    public func reloadData() { playlistView.reloadData() }
+
+    public var onTrackSelected: ((Int) -> Void)? {
+        get { playlistView.onTrackSelected } set { playlistView.onTrackSelected = newValue }
+    }
+    public var onAddTracks: (() -> Void)? {
+        get { playlistView.onAddTracks } set { playlistView.onAddTracks = newValue }
+    }
+    public var onRemoveTracks: (() -> Void)? {
+        get { playlistView.onRemoveTracks } set { playlistView.onRemoveTracks = newValue }
+    }
+    public var onClose: (() -> Void)? {
+        get { playlistView.onClose } set { playlistView.onClose = newValue }
+    }
+
+    public convenience init() {
+        let size = ManzoPlaylistView.intrinsicSize
+        let rect = NSRect(origin: .zero, size: size)
+        let view = ManzoPlaylistView(frame: rect)
+        self.init(view: view, contentRect: rect)
+    }
+
+    private init(view: ManzoPlaylistView, contentRect: NSRect) {
+        self.playlistView = view
+        super.init(contentRect: contentRect,
+                   styleMask: [.borderless, .nonactivatingPanel, .utilityWindow, .resizable, .miniaturizable],
+                   backing: .buffered,
+                   defer: false)
+        self.isOpaque = false
+        self.backgroundColor = .clear
+        self.hasShadow = true
+        self.isMovableByWindowBackground = false
+        self.titleVisibility = .hidden
+        self.titlebarAppearsTransparent = true
+        self.becomesKeyOnlyIfNeeded = true
+        self.hidesOnDeactivate = true
+        self.level = .normal
+        self.contentView = view
+    }
+
+    public override var canBecomeKey: Bool { false }
+    public override var canBecomeMain: Bool { false }
+}
+
+// MARK: - View ----------------------------------------------------------------
+
+public final class ManzoPlaylistView: NSView {
+
+    // MARK: Geometry — mirrors HTML kit
+    public static let intrinsicSize = NSSize(width: 480, height: 220)
+    private let titlebarH:  CGFloat = 14
+    private let toolbarH:   CGFloat = 22
+    private let statusbarH: CGFloat = 14
+    private let rowH:       CGFloat = 24
+    private let cornerR:    CGFloat = 10
+    private let listPadV:   CGFloat = 4   // .padding 4px 0
+
+    // MARK: Data
+    public var tracks: [PlaylistTrack] = [] {
+        didSet { reloadData() }
+    }
+    public var currentIndex: Int = -1 {
+        didSet { rowsView.currentIndex = currentIndex; rowsView.needsDisplay = true }
+    }
+
+    // MARK: Callbacks
+    public var onTrackSelected: ((Int) -> Void)?
+    public var onAddTracks:     (() -> Void)?
+    public var onRemoveTracks:  (() -> Void)?
+    public var onClose:         (() -> Void)?
+
+    // MARK: Subviews
+    private let titlebar  = TitlebarView(title: "PLAYLIST EDITOR")
+    private let toolbar   = ToolbarView()
+    private let scroller  = NSScrollView()
+    fileprivate let rowsView = RowsView()
+    private let statusbar = StatusbarView()
+
+    // MARK: Init
+    public override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.masksToBounds = true
+        layer?.cornerRadius  = cornerR
+        layer?.borderColor   = PLColor.rim.cgColor
+        layer?.borderWidth   = 1
+
+        // Titlebar wiring
+        titlebar.onClose = { [weak self] in self?.onClose?() }
+
+        // Toolbar wiring
+        toolbar.onAdd    = { [weak self] in self?.onAddTracks?() }
+        toolbar.onRemove = { [weak self] in self?.onRemoveTracks?() }
+        toolbar.onSort   = { [weak self] in
+            guard let s = self else { return }
+            s.tracks.sort {
+                ($0.title.lowercased(), $0.duration) <
+                ($1.title.lowercased(), $1.duration)
+            }
+        }
+        toolbar.onSave   = { /* reserved for V2 */ }
+
+        // Rows wiring
+        rowsView.onTrackSelected = { [weak self] i in
+            self?.currentIndex = i
+            self?.onTrackSelected?(i)
+        }
+
+        // Scroller hosting rowsView
+        scroller.drawsBackground = false
+        scroller.hasVerticalScroller = true
+        scroller.scrollerStyle = .overlay
+        scroller.autohidesScrollers = true
+        scroller.documentView = rowsView
+        scroller.contentView.drawsBackground = false
+
+        addSubview(titlebar)
+        addSubview(toolbar)
+        addSubview(scroller)
+        addSubview(statusbar)
+    }
+    public required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: Public — refresh after mutating `tracks` directly
+    public func reloadData() {
+        rowsView.tracks = tracks
+        rowsView.currentIndex = currentIndex
+        statusbar.update(trackCount: tracks.count,
+                         missingCount: tracks.filter(\.isMissing).count,
+                         totalSeconds: tracks.reduce(0) {
+                             $0 + (($1.isMissing || $1.duration.isNaN || $1.duration < 0)
+                                   ? 0 : $1.duration)
+                         })
+        rowsView.frame.size.height = max(scroller.contentSize.height,
+                                         CGFloat(tracks.count) * rowH + listPadV * 2)
+        rowsView.needsDisplay = true
+        toolbar.update(trackCount: tracks.count,
+                       totalSeconds: tracks.reduce(0) {
+                           $0 + (($1.isMissing || $1.duration.isNaN || $1.duration < 0)
+                                 ? 0 : $1.duration)
+                       })
+    }
+
+    // MARK: Layout
+    public override var intrinsicContentSize: NSSize { ManzoPlaylistView.intrinsicSize }
+
+    public override func layout() {
+        super.layout()
+        let w = bounds.width
+        let h = bounds.height
+        titlebar.frame = NSRect(x: 0, y: h - titlebarH, width: w, height: titlebarH)
+        toolbar.frame  = NSRect(x: 0, y: h - titlebarH - toolbarH,
+                                width: w, height: toolbarH)
+        statusbar.frame = NSRect(x: 0, y: 0, width: w, height: statusbarH)
+        let listH = h - titlebarH - toolbarH - statusbarH
+        scroller.frame = NSRect(x: 0, y: statusbarH, width: w, height: listH)
+
+        // Doc view stays at full width; height grows with row count.
+        let needed = max(listH, CGFloat(tracks.count) * rowH + listPadV * 2)
+        rowsView.frame = NSRect(x: 0, y: 0, width: w, height: needed)
+    }
+
+    // MARK: Background — same gradient as ManzoMainWindow
+    public override func draw(_ dirtyRect: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        let space = CGColorSpace(name: CGColorSpace.displayP3)!
+        let path = CGPath(roundedRect: bounds,
+                          cornerWidth: cornerR, cornerHeight: cornerR, transform: nil)
+        ctx.saveGState()
+        ctx.addPath(path); ctx.clip()
+
+        let baseColors = [PLColor.baseTop.cgColor, PLColor.baseBottom.cgColor] as CFArray
+        if let g = CGGradient(colorsSpace: space, colors: baseColors, locations: [0, 1]) {
+            ctx.drawLinearGradient(g,
+                                   start: CGPoint(x: 0, y: bounds.maxY),
+                                   end:   CGPoint(x: 0, y: 0),
+                                   options: [])
+        }
+        // Top specular
+        let specColors = [PLColor.specTop.cgColor,
+                          PLColor.specMid.cgColor,
+                          NSColor.clear.cgColor] as CFArray
+        if let g = CGGradient(colorsSpace: space, colors: specColors,
+                              locations: [0, 0.23, 0.52]) {
+            ctx.drawLinearGradient(g,
+                                   start: CGPoint(x: 0, y: bounds.maxY),
+                                   end:   CGPoint(x: 0, y: bounds.maxY - bounds.height * 0.52),
+                                   options: [])
+        }
+        // Lower glow
+        let glowColors = [NSColor.clear.cgColor, PLColor.lowerGlow.cgColor] as CFArray
+        if let g = CGGradient(colorsSpace: space, colors: glowColors, locations: [0, 1]) {
+            ctx.drawLinearGradient(g,
+                                   start: CGPoint(x: 0, y: bounds.height * 0.25),
+                                   end:   CGPoint(x: 0, y: 0),
+                                   options: [])
+        }
+        ctx.restoreGState()
+    }
+}
+
+// MARK: - Titlebar (14pt) -----------------------------------------------------
+
+private final class TitlebarView: NSView {
+    private let close = TrafficDot(color: PLColor.tlRed)
+    private let mini  = TrafficDot(color: PLColor.tlYellow)
+    private let label = NSTextField(labelWithString: "PLAYLIST EDITOR")
+    private let dim   = NSTextField(labelWithString: "350×420")
+    var onClose: (() -> Void)?
+
+    init(title: String) {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.backgroundColor = PLColor.titlebarBg.cgColor
+        [close, mini].forEach { addSubview($0) }
+
+        label.stringValue = title
+        styleCaps(label, color: PLColor.fg3)
+        addSubview(label)
+
+        styleCaps(dim, color: PLColor.fg3)
+        dim.alphaValue = 0.5
+        addSubview(dim)
+
+        close.onTap = { [weak self] in
+            self?.window?.orderOut(nil)
+            self?.onClose?()
+        }
+        mini.onTap  = { [weak self] in self?.window?.miniaturize(nil) }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
+    private func styleCaps(_ tf: NSTextField, color: NSColor) {
+        tf.font = NSFont.systemFont(ofSize: 9, weight: .medium)
+        tf.textColor = color
+        tf.isBezeled = false; tf.drawsBackground = false; tf.isEditable = false
+        tf.alignment = .center
+    }
+
+    override func layout() {
+        super.layout()
+        let dotSize: CGFloat = 8
+        let y = (bounds.height - dotSize) / 2
+        close.frame = NSRect(x: 10,       y: y, width: dotSize, height: dotSize)
+        mini.frame  = NSRect(x: 10 + 14, y: y, width: dotSize, height: dotSize)
+
+        label.sizeToFit()
+        label.frame = NSRect(x: (bounds.width - label.bounds.width) / 2,
+                             y: (bounds.height - label.bounds.height) / 2,
+                             width: label.bounds.width, height: label.bounds.height)
+
+        dim.sizeToFit()
+        dim.frame = NSRect(x: bounds.width - dim.bounds.width - 10,
+                           y: (bounds.height - dim.bounds.height) / 2,
+                           width: dim.bounds.width, height: dim.bounds.height)
+    }
+}
+
+private final class TrafficDot: NSView {
+    let color: NSColor
+    var onTap: (() -> Void)?
+
+    init(color: NSColor) { self.color = color; super.init(frame: .zero); wantsLayer = true }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func mouseDown(with event: NSEvent) { onTap?() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let p = NSBezierPath(ovalIn: bounds)
+        color.setFill(); p.fill()
+        PLColor.p3(1, 1, 1, 0.18).setStroke()
+        p.lineWidth = 0.5; p.stroke()
+    }
+}
+
+// MARK: - Toolbar (22pt) ------------------------------------------------------
+
+private final class ToolbarView: NSView {
+
+    var onAdd:    (() -> Void)?
+    var onRemove: (() -> Void)?
+    var onSort:   (() -> Void)?
+    var onSave:   (() -> Void)?
+
+    private let addBtn = GhostButton(title: "+ ADD")
+    private let remBtn = GhostButton(title: "− REM")
+    private let sep1   = SeparatorTick()
+    private let sortBtn = GhostButton(title: "SORT")
+    private let saveBtn = GhostButton(title: "SAVE")
+    private let countLabel = NSTextField(labelWithString: "0 TRACKS · 0:00")
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = PLColor.toolbarBg.cgColor
+
+        addBtn.onClick  = { [weak self] in self?.onAdd?()    }
+        remBtn.onClick  = { [weak self] in self?.onRemove?() }
+        sortBtn.onClick = { [weak self] in self?.onSort?()   }
+        saveBtn.onClick = { [weak self] in self?.onSave?()   }
+
+        countLabel.font = NSFont.systemFont(ofSize: 10, weight: .regular)
+        countLabel.textColor = PLColor.fg3
+        countLabel.isBezeled = false; countLabel.drawsBackground = false
+        countLabel.isEditable = false; countLabel.alignment = .right
+
+        [addBtn, remBtn, sep1, sortBtn, saveBtn, countLabel].forEach { addSubview($0) }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    func update(trackCount: Int, totalSeconds: TimeInterval) {
+        let total = Int(totalSeconds.rounded())
+        countLabel.stringValue =
+            "\(trackCount) TRACK\(trackCount == 1 ? "" : "S") · " +
+            String(format: "%d:%02d", total / 60, total % 60)
+        needsLayout = true
+    }
+
+    override func layout() {
+        super.layout()
+        var x: CGFloat = 10
+        let y: CGFloat = 0
+        let h = bounds.height
+        for ghost in [addBtn, remBtn] {
+            ghost.sizeToFit()
+            ghost.frame = NSRect(x: x, y: (h - ghost.bounds.height) / 2,
+                                 width: ghost.bounds.width, height: ghost.bounds.height)
+            x += ghost.bounds.width + 6
+        }
+        sep1.frame = NSRect(x: x, y: (h - 10) / 2, width: 1, height: 10)
+        x += 1 + 6
+        for ghost in [sortBtn, saveBtn] {
+            ghost.sizeToFit()
+            ghost.frame = NSRect(x: x, y: (h - ghost.bounds.height) / 2,
+                                 width: ghost.bounds.width, height: ghost.bounds.height)
+            x += ghost.bounds.width + 6
+        }
+        countLabel.sizeToFit()
+        countLabel.frame = NSRect(x: bounds.width - countLabel.bounds.width - 10,
+                                  y: (h - countLabel.bounds.height) / 2,
+                                  width: countLabel.bounds.width,
+                                  height: countLabel.bounds.height)
+        _ = y
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Bottom 1px hairline
+        PLColor.p3(1, 1, 1, 0.04).setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: bounds.width, height: 1)).fill()
+    }
+}
+
+private final class GhostButton: NSView {
+    private(set) var title: String
+    var onClick: (() -> Void)?
+    private var hovered = false { didSet { needsDisplay = true } }
+    var isPressed = false
+    private var trackingArea: NSTrackingArea?
+
+    init(title: String) {
+        self.title = title
+        super.init(frame: .zero)
+        wantsLayer = true
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    func sizeToFit() {
+        let attr = Self.attrs(hovered: false)
+        let s = (title as NSString).size(withAttributes: attr)
+        frame.size = NSSize(width: ceil(s.width) + 12, height: 14)
+    }
+
+    private static func attrs(hovered: Bool) -> [NSAttributedString.Key: Any] {
+        [.font: NSFont.systemFont(ofSize: 10, weight: .medium),
+         .foregroundColor: hovered ? NSColor.white : PLColor.fg3,
+         .kern: 0.8]
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = trackingArea { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: bounds,
+                               options: [.mouseEnteredAndExited, .activeInKeyWindow],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t); trackingArea = t
+    }
+
+    override func mouseEntered(with event: NSEvent) { hovered = true  }
+    override func mouseExited (with event: NSEvent) { hovered = false }
+
+    override func mouseDown(with event: NSEvent) {
+        isPressed = true
+        needsDisplay = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        isPressed = false
+        needsDisplay = true
+        onClick?()
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let r = bounds
+        let bg = NSBezierPath(roundedRect: r, xRadius: 3, yRadius: 3)
+        let baseFill: NSColor
+        if isPressed {
+            baseFill = PLColor.p3(1, 1, 1, 0.22)
+        } else {
+            baseFill = hovered ? PLColor.ghostBgHover : PLColor.ghostBg
+        }
+        baseFill.setFill()
+        bg.fill()
+        let attr = Self.attrs(hovered: hovered || isPressed)
+        let s = (title as NSString)
+        let size = s.size(withAttributes: attr)
+        s.draw(at: NSPoint(x: (r.width  - size.width)  / 2,
+                           y: (r.height - size.height) / 2),
+               withAttributes: attr)
+    }
+}
+
+private final class SeparatorTick: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        PLColor.sep.setFill()
+        NSBezierPath(rect: bounds).fill()
+    }
+}
+
+// MARK: - Rows view (the scrollable list) -------------------------------------
+
+fileprivate final class RowsView: NSView {
+
+    var tracks: [PlaylistTrack] = []
+    var currentIndex: Int = -1
+    var onTrackSelected: ((Int) -> Void)?
+
+    private let rowH: CGFloat = 24
+    private let listPadV: CGFloat = 4
+    private var hoverIndex: Int = -1
+    private var trackingArea: NSTrackingArea?
+
+    override var isFlipped: Bool { true }
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: Hit-testing
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = trackingArea { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: bounds,
+                               options: [.mouseEnteredAndExited, .mouseMoved,
+                                         .activeInKeyWindow, .inVisibleRect],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t); trackingArea = t
+    }
+
+    private func indexAt(_ p: NSPoint) -> Int {
+        guard p.y >= listPadV else { return -1 }
+        let i = Int((p.y - listPadV) / rowH)
+        return (i >= 0 && i < tracks.count) ? i : -1
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        let new = indexAt(p)
+        if new != hoverIndex { hoverIndex = new; needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) {
+        if hoverIndex != -1 { hoverIndex = -1; needsDisplay = true }
+    }
+    override func mouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        let i = indexAt(p)
+        if i >= 0 { onTrackSelected?(i) }
+    }
+
+    // MARK: Painting
+    override func draw(_ dirtyRect: NSRect) {
+        let w = bounds.width
+        for (i, track) in tracks.enumerated() {
+            let y = listPadV + CGFloat(i) * rowH
+            let rowRect = NSRect(x: 0, y: y, width: w, height: rowH)
+            drawRow(track: track, index: i, rect: rowRect)
+        }
+    }
+
+    private func drawRow(track: PlaylistTrack, index i: Int, rect: NSRect) {
+        let isActive  = (i == currentIndex)
+        let isHover   = (i == hoverIndex && !isActive)
+        let isMissing = track.isMissing
+
+        // Background
+        if isActive {
+            let inset = NSRect(x: rect.minX + 4, y: rect.minY + 1,
+                               width: rect.width - 8, height: rect.height - 2)
+            let p = NSBezierPath(roundedRect: inset, xRadius: 3, yRadius: 3)
+            // Vertical gradient blue → darker blue
+            if let ctx = NSGraphicsContext.current?.cgContext {
+                ctx.saveGState()
+                p.addClip()
+                let cs = [PLColor.selectionBlue.cgColor,
+                          PLColor.selectionBlueD.cgColor] as CFArray
+                if let g = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
+                                      colors: cs, locations: [0, 1]) {
+                    ctx.drawLinearGradient(g,
+                                           start: CGPoint(x: 0, y: inset.maxY),
+                                           end:   CGPoint(x: 0, y: inset.minY),
+                                           options: [])
+                }
+                ctx.restoreGState()
+            }
+        } else if isHover {
+            PLColor.hover.setFill()
+            NSBezierPath(rect: rect).fill()
+        }
+
+        // Bottom 1px row separator (skip last; skip behind active)
+        if !isActive {
+            PLColor.rowBorder.setFill()
+            NSBezierPath(rect: NSRect(x: rect.minX, y: rect.maxY - 1,
+                                      width: rect.width, height: 1)).fill()
+        }
+
+        // Text colors
+        let mainColor: NSColor
+        let dimColor:  NSColor
+        if isActive {
+            mainColor = NSColor.white
+            dimColor  = NSColor.white.withAlphaComponent(0.9)
+        } else if isMissing {
+            mainColor = PLColor.missing
+            dimColor  = PLColor.missing
+        } else {
+            mainColor = PLColor.fg2
+            dimColor  = PLColor.fg3
+        }
+
+        // Common attrs
+        let monoFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        let textFont = NSFont.systemFont(ofSize: 11, weight: .regular)
+
+        var idxAttr: [NSAttributedString.Key: Any] = [
+            .font: monoFont, .foregroundColor: dimColor]
+        var titleAttr: [NSAttributedString.Key: Any] = [
+            .font: textFont, .foregroundColor: mainColor]
+        var timeAttr: [NSAttributedString.Key: Any] = [
+            .font: monoFont, .foregroundColor: dimColor]
+
+        if isMissing {
+            idxAttr[.strikethroughStyle]   = NSUnderlineStyle.single.rawValue
+            titleAttr[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+            timeAttr[.strikethroughStyle]  = NSUnderlineStyle.single.rawValue
+            idxAttr[.strikethroughColor]   = PLColor.missing
+            titleAttr[.strikethroughColor] = PLColor.missing
+            timeAttr[.strikethroughColor]  = PLColor.missing
+        }
+
+        // Layout: 12px left padding, 28px idx column, then title; time right-aligned, 12px right pad
+        let padL: CGFloat = 12, padR: CGFloat = 12
+        let idxColW: CGFloat = 28
+
+        let idxStr = String(format: "%02d.", i + 1) as NSString
+        let idxSize = idxStr.size(withAttributes: idxAttr)
+        let idxY = rect.minY + (rect.height - idxSize.height) / 2
+        idxStr.draw(at: NSPoint(x: rect.minX + padL, y: idxY), withAttributes: idxAttr)
+
+        // Time on the right
+        let displayTime = isMissing ? "−:−−" : track.durationString
+        let timeStr = displayTime as NSString
+        let timeSize = timeStr.size(withAttributes: timeAttr)
+        let timeX = rect.maxX - padR - timeSize.width
+        let timeY = rect.minY + (rect.height - timeSize.height) / 2
+        timeStr.draw(at: NSPoint(x: timeX, y: timeY), withAttributes: timeAttr)
+
+        // Title (truncated to fit between idx column and time)
+        let titleX = rect.minX + padL + idxColW
+        let titleAvailW = max(0, timeX - 8 - titleX)
+        var titleText = track.title
+        if isMissing && !titleText.lowercased().contains("missing") {
+            titleText += " (missing)"
+        }
+        let drawnTitle = truncate(titleText, attrs: titleAttr, maxWidth: titleAvailW)
+        let titleStr = drawnTitle as NSString
+        let titleSize = titleStr.size(withAttributes: titleAttr)
+        let titleY = rect.minY + (rect.height - titleSize.height) / 2
+        titleStr.draw(in: NSRect(x: titleX, y: titleY,
+                                 width: titleAvailW, height: titleSize.height),
+                      withAttributes: titleAttr)
+    }
+
+    private func truncate(_ s: String,
+                          attrs: [NSAttributedString.Key: Any],
+                          maxWidth: CGFloat) -> String {
+        let ns = s as NSString
+        if ns.size(withAttributes: attrs).width <= maxWidth { return s }
+        let ellipsis = "…"
+        var lo = 0, hi = ns.length
+        while lo < hi {
+            let mid = (lo + hi + 1) / 2
+            let candidate = ns.substring(to: mid) + ellipsis
+            let w = (candidate as NSString).size(withAttributes: attrs).width
+            if w <= maxWidth { lo = mid } else { hi = mid - 1 }
+        }
+        return ns.substring(to: lo) + ellipsis
+    }
+}
+
+// MARK: - Statusbar (14pt) ----------------------------------------------------
+
+private final class StatusbarView: NSView {
+    private let left  = NSTextField(labelWithString: "0 TRACKS · 0 MISSING")
+    private let right = NSTextField(labelWithString: "0:00")
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = PLColor.statusbarBg.cgColor
+
+        for tf in [left, right] {
+            tf.font = NSFont.systemFont(ofSize: 9, weight: .medium)
+            tf.textColor = PLColor.fg3
+            tf.isBezeled = false; tf.drawsBackground = false; tf.isEditable = false
+        }
+        addSubview(left); addSubview(right)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    func update(trackCount: Int, missingCount: Int, totalSeconds: TimeInterval) {
+        left.stringValue = "\(trackCount) TRACK\(trackCount == 1 ? "" : "S") · " +
+                           "\(missingCount) MISSING"
+        let total = Int(totalSeconds.rounded())
+        right.stringValue = String(format: "%d:%02d", total / 60, total % 60)
+        needsLayout = true
+        needsDisplay = true
+    }
+
+    override func layout() {
+        super.layout()
+        left.sizeToFit()
+        left.frame.origin = NSPoint(x: 10,
+                                    y: (bounds.height - left.bounds.height) / 2)
+        right.sizeToFit()
+        right.frame.origin = NSPoint(x: bounds.width - right.bounds.width - 10,
+                                     y: (bounds.height - right.bounds.height) / 2)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Top 1px hairline (matches HTML border-top)
+        PLColor.p3(1, 1, 1, 0.04).setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: bounds.maxY - 1,
+                                  width: bounds.width, height: 1)).fill()
+    }
 }

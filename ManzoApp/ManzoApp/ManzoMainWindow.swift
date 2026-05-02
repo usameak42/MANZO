@@ -54,7 +54,7 @@ enum ManzoColor {
 // MARK: - Geometry ------------------------------------------------------------
 
 enum ManzoMetrics {
-    static let windowW:     CGFloat = 480
+    static let windowW:     CGFloat = 540
     static let windowH:     CGFloat = 116
     static let titlebarH:   CGFloat = 14
     static let statusbarH:  CGFloat = 14
@@ -69,13 +69,13 @@ public final class ManzoMainWindow: NSWindow {
         let size = NSSize(width: ManzoMetrics.windowW, height: ManzoMetrics.windowH)
         let rect = NSRect(origin: .zero, size: size)
         self.init(contentRect: rect,
-                  styleMask: [.borderless, .resizable],
+                  styleMask: [.borderless, .resizable, .miniaturizable],
                   backing: .buffered,
                   defer: false)
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = true
-        self.isMovableByWindowBackground = true
+        self.isMovableByWindowBackground = false
         self.titleVisibility = .hidden
         self.titlebarAppearsTransparent = true
         let root = ManzoMainWindowView(frame: rect)
@@ -165,14 +165,13 @@ public final class ManzoMainWindowView: NSView {
 final class ManzoTitlebar: NSView {
     private let close = TrafficLight(color: ManzoColor.tlRed)
     private let mini  = TrafficLight(color: ManzoColor.tlYellow)
-    private let maxi  = TrafficLight(color: ManzoColor.tlGreen)
     private let label = NSTextField(labelWithString: "MANZO")
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
         layer?.backgroundColor = ManzoColor.p3(1, 1, 1, 0.08).cgColor
-        [close, mini, maxi].forEach { addSubview($0) }
+        [close, mini].forEach { addSubview($0) }
         label.font = NSFont.systemFont(ofSize: 9, weight: .medium)
         label.textColor = ManzoColor.fg3
         label.alignment = .center
@@ -182,13 +181,22 @@ final class ManzoTitlebar: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        close.action = { [weak self] in self?.window?.close() }
+        mini.action  = { [weak self] in self?.window?.miniaturize(nil) }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
     override func layout() {
         super.layout()
         let dotSize: CGFloat = 8
         let y = (bounds.height - dotSize) / 2
-        close.frame = NSRect(x: 10,            y: y, width: dotSize, height: dotSize)
-        mini.frame  = NSRect(x: 10 + 14,       y: y, width: dotSize, height: dotSize)
-        maxi.frame  = NSRect(x: 10 + 14 + 14,  y: y, width: dotSize, height: dotSize)
+        close.frame = NSRect(x: 10,       y: y, width: dotSize, height: dotSize)
+        mini.frame  = NSRect(x: 10 + 14, y: y, width: dotSize, height: dotSize)
         label.sizeToFit()
         label.frame = NSRect(x: (bounds.width - label.bounds.width) / 2,
                              y: (bounds.height - label.bounds.height) / 2,
@@ -200,6 +208,8 @@ final class ManzoTitlebar: NSView {
 
 final class TrafficLight: NSView {
     let color: NSColor
+    var action: (() -> Void)?
+
     init(color: NSColor) {
         self.color = color
         super.init(frame: .zero)
@@ -207,11 +217,12 @@ final class TrafficLight: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
+    override func mouseDown(with event: NSEvent) { action?() }
+
     override func draw(_ dirtyRect: NSRect) {
         let path = NSBezierPath(ovalIn: bounds)
         color.setFill()
         path.fill()
-        // inner rim
         ManzoColor.p3(1, 1, 1, 0.18).setStroke()
         path.lineWidth = 0.5
         path.stroke()
@@ -239,7 +250,7 @@ final class ManzoBodyView: NSView {
     let volSlider = KnobSlider(value: 0.70)
     private let balLabel = CapsLabel("bal")
     let balSlider = KnobSlider(value: 0.50, centered: true, width: 40)
-    let eqBtn = PillToggle(title: "EQ", isOn: true)
+    let eqBtn = PillToggle(title: "EQ", isOn: false)
     let plBtn = PillToggle(title: "PL", isOn: true)
 
     override init(frame: NSRect) {
@@ -260,73 +271,57 @@ final class ManzoBodyView: NSView {
 
     override func layout() {
         super.layout()
-        // ManzoBodyView is 88pt tall (480 - 14 titlebar - 14 statusbar).
-        // It splits vertically into:
-        //   • top meta-band (54pt): LCD · marquee/specs/seek · analyzer
-        //   • bottom transport row (34pt): 6 buttons · vol · bal · EQ/PL
-        //                                  (24pt controls + 10pt bottom pad)
-        let padX: CGFloat       = 14
-        let gap:  CGFloat       = 14   // gap between LCD/meta/analyzer
-        let transportH: CGFloat = 24
-        let transportPadY: CGFloat = 10        // bottom breathing room
-        let topBandH: CGFloat = bounds.height - transportH - transportPadY  // 54
+        let padX: CGFloat          = 16
+        let gap:  CGFloat          = 16
+        let transportH: CGFloat    = 24
+        let transportPadY: CGFloat = 10
+        let topBandH: CGFloat      = bounds.height - transportH - transportPadY
 
-        // LCD: 86 wide, full top-band tall, left-aligned
+        // LCD: 97pt wide, full top-band tall, left-aligned
         lcd.frame = NSRect(x: padX,
                            y: bounds.height - topBandH,
-                           width: 86, height: topBandH)
+                           width: 97, height: topBandH)
 
-        // Analyzer 120×32, vertically centered in the top band, right-aligned
-        let anaW: CGFloat = 120, anaH: CGFloat = 32
+        // Analyzer 135×32, vertically centered in the top band, right-aligned
+        let anaW: CGFloat = 135, anaH: CGFloat = 32
         analyzer.frame = NSRect(x: bounds.width - padX - anaW,
                                 y: bounds.height - topBandH + (topBandH - anaH) / 2,
                                 width: anaW, height: anaH)
 
-        // Meta column between LCD and analyzer:
-        //   marquee(18) · specs(12) · seek(10)  with 5pt gaps
-        let metaX = lcd.frame.maxX + gap
-        let metaW = analyzer.frame.minX - gap - metaX
-        let metaTop = bounds.height - 4         // 4pt visual padding under titlebar
+        // Meta column between LCD and analyzer
+        let metaX   = lcd.frame.maxX + gap
+        let metaW   = analyzer.frame.minX - gap - metaX
+        let metaTop = bounds.height - 4
         marquee.frame = NSRect(x: metaX, y: metaTop - 18,
                                width: metaW, height: 18)
         specs.frame   = NSRect(x: metaX, y: marquee.frame.minY - 5 - 12,
                                width: metaW, height: 12)
-        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 5 - 10,
+        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 5 - 10 + 2,
                                width: metaW, height: 10)
 
-        // ─ Transport row ─ baseline at transportPadY, controls 24pt tall.
-        let tY: CGFloat = transportPadY
-        let btnW: CGFloat = 30, btnH: CGFloat = transportH, btnGap: CGFloat = 6
-        var x: CGFloat = padX
+        // Transport row
+        let tY: CGFloat    = transportPadY
+        let btnW: CGFloat  = 30, btnH: CGFloat = transportH, btnGap: CGFloat = 7
+        var x: CGFloat     = padX
 
-        // 6 transport buttons (30×24, gap 6) → 6·30 + 5·6 = 210pt
         for btn in [prev, play, pause, stop, next, eject] {
             btn.frame = NSRect(x: x, y: tY, width: btnW, height: btnH)
             x += btnW + btnGap
         }
-        // visual spacer after transport
-        x += 8
+        x += 9
 
-        // VOL label + 64pt knob
         volLabel.sizeToFit()
-        volLabel.frame.origin = NSPoint(
-            x: x, y: tY + (btnH - volLabel.frame.height) / 2)
+        volLabel.frame.origin = NSPoint(x: x, y: tY + (btnH - volLabel.frame.height) / 2)
         x += volLabel.frame.width + 6
-        volSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2,
-                                 width: 64, height: 8)
-        x += 64 + 10
+        volSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2, width: 72, height: 8)
+        x += 72 + 10
 
-        // BAL label + 40pt knob
         balLabel.sizeToFit()
-        balLabel.frame.origin = NSPoint(
-            x: x, y: tY + (btnH - balLabel.frame.height) / 2)
+        balLabel.frame.origin = NSPoint(x: x, y: tY + (btnH - balLabel.frame.height) / 2)
         x += balLabel.frame.width + 6
-        balSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2,
-                                 width: 40, height: 8)
-        x += 40 + 10
+        balSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2, width: 45, height: 8)
 
-        // EQ / PL pills — right-anchored so they sit flush with padX.
-        // Each pill 26×24, 4pt gap.
+        // EQ / PL pills — right-anchored
         let pillW: CGFloat = 26, pillGap: CGFloat = 4
         let pillsRight = bounds.width - padX
         plBtn.frame = NSRect(x: pillsRight - pillW,
@@ -460,8 +455,6 @@ final class SeekBar: NSView {
         let thumb = NSRect(x: fillRect.maxX - 4, y: track.midY - 5, width: 8, height: 10)
         let tPath = NSBezierPath(roundedRect: thumb, xRadius: 2, yRadius: 2)
         NSColor.white.setFill(); tPath.fill()
-        ManzoColor.p3(0, 0, 0, 0.4).setStroke()
-        tPath.lineWidth = 1; tPath.stroke()
     }
 }
 
@@ -533,36 +526,82 @@ final class KnobSlider: NSView {
 // MARK: - Transport button ----------------------------------------------------
 
 final class TransportButton: NSControl {
+
     enum Glyph { case prev, play, pause, stop, next, eject }
+
     let glyph: Glyph
-    private(set) var isPressed = false
+
+    var onTap: (() -> Void)?
+
+    private(set) var isPressed = false {
+        didSet {
+            if oldValue != isPressed { needsDisplay = true }
+        }
+    }
+
+    private var isHoverInside = false
 
     init(glyph: Glyph) {
         self.glyph = glyph
         super.init(frame: .zero)
         wantsLayer = true
     }
+
     required init?(coder: NSCoder) { fatalError() }
 
-    var onTap: (() -> Void)?
-    override func mouseDown(with event: NSEvent) { isPressed = true;  needsDisplay = true }
-    override func mouseUp(with event: NSEvent)   { isPressed = false; needsDisplay = true
-        onTap?()
+    // MARK: Mouse — Winamp-style press/release with drag-out cancel ----------
+
+    override func mouseDown(with event: NSEvent) {
+        guard isEnabled else { return }
+        isHoverInside = true
+        isPressed = true
     }
+
+    override func mouseDragged(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        let inside = bounds.contains(p)
+        if inside != isHoverInside {
+            isHoverInside = inside
+            isPressed = inside
+        }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let wasInside = isHoverInside
+        isPressed = false
+        isHoverInside = false
+        if wasInside, isEnabled {
+            sendAction(action, to: target)
+            onTap?()
+        }
+    }
+
+    override func performClick(_ sender: Any?) {
+        guard isEnabled else { return }
+        isPressed = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+            guard let self = self else { return }
+            self.isPressed = false
+            self.sendAction(self.action, to: self.target)
+            self.onTap?()
+        }
+    }
+
+    // MARK: Drawing ---------------------------------------------------------
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
         let path = NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4)
+        let space = CGColorSpace(name: CGColorSpace.displayP3)!
 
-        // Beveled gray face
+        // ─ Beveled face ──────────────────────────────────────────────────
         ctx.saveGState()
         path.addClip()
-        let space = CGColorSpace(name: CGColorSpace.displayP3)!
         let topA: NSColor, botA: NSColor
         if isPressed {
-            topA = ManzoColor.p3(0.28, 0.30, 0.36)
-            botA = ManzoColor.p3(0.58, 0.60, 0.66)
+            topA = ManzoColor.p3(0.20, 0.22, 0.26)
+            botA = ManzoColor.p3(0.46, 0.48, 0.54)
         } else {
             topA = ManzoColor.p3(0.58, 0.60, 0.66)
             botA = ManzoColor.p3(0.28, 0.30, 0.36)
@@ -574,21 +613,60 @@ final class TransportButton: NSControl {
                                    end:   CGPoint(x: 0, y: rect.minY),
                                    options: [])
         }
+
+        if isPressed {
+            let shadowColors = [
+                ManzoColor.p3(0, 0, 0, 0.55).cgColor,
+                ManzoColor.p3(0, 0, 0, 0.0).cgColor
+            ] as CFArray
+            if let sg = CGGradient(colorsSpace: space, colors: shadowColors, locations: [0, 1]) {
+                ctx.drawLinearGradient(sg,
+                                       start: CGPoint(x: 0, y: rect.maxY),
+                                       end:   CGPoint(x: 0, y: rect.maxY - rect.height * 0.45),
+                                       options: [])
+            }
+            let sideColors = [
+                ManzoColor.p3(0, 0, 0, 0.30).cgColor,
+                ManzoColor.p3(0, 0, 0, 0.0).cgColor
+            ] as CFArray
+            if let sg = CGGradient(colorsSpace: space, colors: sideColors, locations: [0, 1]) {
+                ctx.drawLinearGradient(sg,
+                                       start: CGPoint(x: rect.minX, y: 0),
+                                       end:   CGPoint(x: rect.minX + rect.width * 0.30, y: 0),
+                                       options: [])
+            }
+        }
         ctx.restoreGState()
 
-        // Outer dark rim
-        ManzoColor.p3(0, 0, 0, 0.6).setStroke()
+        // ─ Outer dark rim ────────────────────────────────────────────────
+        ManzoColor.p3(0, 0, 0, isPressed ? 0.75 : 0.6).setStroke()
         path.lineWidth = 1; path.stroke()
-        // Top hairline highlight
+
+        // ─ Top hairline highlight ────────────────────────────────────────
         let hi = NSBezierPath()
-        hi.move(to: NSPoint(x: rect.minX + 1, y: rect.maxY - 0.5))
-        hi.line(to: NSPoint(x: rect.maxX - 1, y: rect.maxY - 0.5))
-        ManzoColor.p3(1, 1, 1, 0.45).setStroke()
+        if isPressed {
+            hi.move(to: NSPoint(x: rect.minX + 1, y: rect.minY + 0.5))
+            hi.line(to: NSPoint(x: rect.maxX - 1, y: rect.minY + 0.5))
+            ManzoColor.p3(1, 1, 1, 0.18).setStroke()
+        } else {
+            hi.move(to: NSPoint(x: rect.minX + 1, y: rect.maxY - 0.5))
+            hi.line(to: NSPoint(x: rect.maxX - 1, y: rect.maxY - 0.5))
+            ManzoColor.p3(1, 1, 1, 0.45).setStroke()
+        }
         hi.lineWidth = 1; hi.stroke()
 
-        // Glyph — dark ink for beveled look
-        let ink = ManzoColor.p3(0.08, 0.09, 0.12)
-        drawGlyph(in: ctx, rect: rect, ink: ink)
+        // ─ Glyph ─────────────────────────────────────────────────────────
+        let ink = isPressed
+            ? ManzoColor.p3(0.04, 0.05, 0.07)
+            : ManzoColor.p3(0.08, 0.09, 0.12)
+        if isPressed {
+            ctx.saveGState()
+            ctx.translateBy(x: 0.5, y: -1)
+            drawGlyph(in: ctx, rect: rect, ink: ink)
+            ctx.restoreGState()
+        } else {
+            drawGlyph(in: ctx, rect: rect, ink: ink)
+        }
     }
 
     private func drawGlyph(in ctx: CGContext, rect: NSRect, ink: NSColor) {
@@ -597,7 +675,6 @@ final class TransportButton: NSControl {
         let cx = rect.midX, cy = rect.midY
         switch glyph {
         case .prev:
-            // bar + triangle reversed
             let bar = NSRect(x: cx - 6, y: cy - 4, width: 1.5, height: 8)
             NSBezierPath(rect: bar).fill()
             let p = NSBezierPath()
@@ -612,7 +689,7 @@ final class TransportButton: NSControl {
             p.line(to: NSPoint(x: cx - 4, y: cy + 5))
             p.close(); p.fill()
         case .pause:
-            NSBezierPath(rect: NSRect(x: cx - 4, y: cy - 4, width: 2.5, height: 8)).fill()
+            NSBezierPath(rect: NSRect(x: cx - 4,   y: cy - 4, width: 2.5, height: 8)).fill()
             NSBezierPath(rect: NSRect(x: cx + 1.5, y: cy - 4, width: 2.5, height: 8)).fill()
         case .stop:
             NSBezierPath(rect: NSRect(x: cx - 4, y: cy - 4, width: 8, height: 8)).fill()
@@ -625,7 +702,7 @@ final class TransportButton: NSControl {
             NSBezierPath(rect: NSRect(x: cx + 3, y: cy - 4, width: 1.5, height: 8)).fill()
         case .eject:
             let p = NSBezierPath()
-            p.move(to: NSPoint(x: cx, y: cy + 4))
+            p.move(to: NSPoint(x: cx,     y: cy + 4))
             p.line(to: NSPoint(x: cx + 5, y: cy - 1))
             p.line(to: NSPoint(x: cx - 5, y: cy - 1))
             p.close(); p.fill()
@@ -814,23 +891,34 @@ final class ManzoStatusbar: NSView {
         left.font = NSFont.systemFont(ofSize: 9, weight: .medium)
         left.textColor = ManzoColor.fg3
         left.isBezeled = false; left.drawsBackground = false
+        left.lineBreakMode = .byTruncatingTail
+        left.cell?.truncatesLastVisibleLine = true
         [left, shuf, rep, eq].forEach { addSubview($0) }
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    func setStatus(_ text: String) { left.stringValue = text }
+    func setStatus(_ text: String) {
+        left.stringValue = text
+        needsLayout = true
+    }
 
     override func layout() {
         super.layout()
-        left.sizeToFit()
-        left.frame.origin = NSPoint(x: 10, y: (bounds.height - left.bounds.height)/2)
+        // Position badges right-to-left first, record leftmost badge x
         var x = bounds.width - 10
         for b in [eq, rep, shuf] {
             b.sizeToFit()
             x -= b.bounds.width
-            b.frame.origin = NSPoint(x: x, y: (bounds.height - b.bounds.height)/2)
+            b.frame.origin = NSPoint(x: x, y: (bounds.height - b.bounds.height) / 2)
             x -= 4
         }
+        // Give left label everything from x=10 to 8pt before the first badge
+        left.sizeToFit()
+        let labelH = left.bounds.height
+        left.frame = NSRect(x: 10,
+                            y: (bounds.height - labelH) / 2,
+                            width: max(0, x - 8 - 10),
+                            height: labelH)
     }
 }
 
