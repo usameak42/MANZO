@@ -9,7 +9,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 use std::ffi::CStr;
 use rustfft::{FftPlanner, num_complex::Complex};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, AtomicBool, AtomicI32, Ordering};
 
 /// Opaque handle returned by manzo_open and passed to all subsequent calls.
 /// The real state lives behind a raw pointer cast to Arc<Mutex<InnerState>>.
@@ -21,6 +21,17 @@ pub struct ManzoHandle {
 /// Feed chunk size in bytes — validated pattern from spike 003; do not change.
 const FEED_CHUNK_SIZE: usize = 4096;
 
+/// Lock-free control flags shared between the UI thread and the audio callback.
+/// Separated from InnerState so manzo_pause/manzo_stop never need to acquire
+/// the decoder mutex — eliminating the WR-03 UI freeze on pause.
+struct HandleInner {
+    inner: Mutex<InnerState>,
+    /// True while the audio callback should decode and output PCM.
+    control_playing: AtomicBool,
+    /// Current playback state: 1=PLAYING, 2=PAUSED, 3=STOPPED, 4=ENDED.
+    control_state: AtomicI32,
+}
+
 /// Internal playback state, protected by Arc<Mutex<>> per D-02.
 struct InnerState {
     mpg_handle: *mut mpg123_sys::mpg123_handle,
@@ -30,7 +41,6 @@ struct InnerState {
     position_samples: u64,
     sample_rate: u32,
     channels: u16,
-    is_playing: bool,
     // Phase 4 DSP fields
     eq_gains: [f32; 10],
     eq_preamp: f32,
@@ -62,9 +72,6 @@ struct InnerState {
     target_pan: f32,
     current_pan: f32,
     pan_ramp_remaining: u32,
-    // Phase 3 (D-02): playback state for manzo_get_state()
-    //   1 = PLAYING, 2 = PAUSED, 3 = STOPPED, 4 = ENDED
-    playback_state: i32,
     // Phase 3 (D-04): 529-sample mpg123 decoder startup delay trim.
     // Initialized to 529 in manzo_open; decremented in audio callback as samples are discarded.
     // manzo_seek does NOT reset this counter (D-04: trim fires only on manzo_open).
@@ -201,7 +208,6 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         position_samples: 0,
         sample_rate: 44100,
         channels: 2,
-        is_playing: false,
         eq_gains: [0.0; 10],
         eq_preamp: 0.0,
         preamp_gain_linear: 1.0_f32,           // 0 dB = unity gain
@@ -220,12 +226,15 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         target_pan: 0.0,
         current_pan: 0.0,
         pan_ramp_remaining: 0,
-        playback_state: 3,           // STOPPED — D-02; no track playing on fresh open
         startup_skip_remaining: 529, // D-04: trim mpg123 decoder delay on first decode
         total_samples,               // D-03: cached at open time via secondary file-API probe
     };
 
-    let arc = Arc::new(Mutex::new(inner));
+    let arc = Arc::new(HandleInner {
+        inner: Mutex::new(inner),
+        control_playing: AtomicBool::new(false),
+        control_state: AtomicI32::new(3), // STOPPED on fresh open
+    });
     Box::into_raw(Box::new(arc)) as *mut ManzoHandle
 }
 
@@ -238,7 +247,7 @@ pub extern "C" fn manzo_close(handle: *mut ManzoHandle) {
     }
     // T-02-07: Box::from_raw takes ownership; drop frees Arc; InnerState::drop cleans mpg123
     unsafe {
-        let arc = Box::from_raw(handle as *mut Arc<Mutex<InnerState>>);
+        let arc = Box::from_raw(handle as *mut Arc<HandleInner>);
         drop(arc);
     }
 }
@@ -251,15 +260,15 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
         return -1;
     }
 
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
 
-    // T-02-08: recover from poisoned mutex
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
-
-    // Idempotent: already playing
-    if state.is_playing {
+    // Idempotent: already playing — check atomic without taking the decoder lock
+    if arc.control_playing.load(Ordering::Relaxed) {
         return 0;
     }
+
+    // T-02-08: recover from poisoned mutex
+    let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
 
     // Acquire cpal output device
     let host = cpal::default_host();
@@ -280,28 +289,18 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
     let stream = match device.build_output_stream(
         &stream_config,
         move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-            // T-02-08: recover from poisoned mutex; fill silence on failure
-            //
-            // KNOWN LIMITATION (WR-03): The mutex is held for the entire decode loop
-            // below, including all mpg123_read and mpg123_feed calls. This means
-            // manzo_pause and manzo_seek on the UI thread will block until the current
-            // audio callback completes. On a slow path this can exceed the 8 ms frame
-            // budget and produce a visible UI freeze or audio dropout.
-            //
-            // PHASE 5 FIX: Split InnerState into two structs:
-            //   - ControlState { is_playing, file_offset, position_samples } — mutex-guarded
-            //   - DecoderState { mpg_handle, file_data, ... } — audio-thread-only, no lock
-            // The callback copies out control flags at entry, releases the lock, then
-            // decodes without holding it. See spike 004 findings for the full pattern.
-            let mut s = match inner_clone.lock() {
-                Ok(s) => s,
-                Err(e) => e.into_inner(),
-            };
-
-            if !s.is_playing {
+            // WR-03 fix: check control_playing atomically BEFORE acquiring the decoder mutex.
+            // manzo_pause stores false here without ever locking — no UI thread blocking.
+            if !inner_clone.control_playing.load(Ordering::Relaxed) {
                 data.fill(0.0);
                 return;
             }
+
+            // Acquire decoder mutex only on the decode path.
+            let mut s = match inner_clone.inner.lock() {
+                Ok(s) => s,
+                Err(e) => e.into_inner(),
+            };
 
             let mut written = 0usize;
             while written < data.len() {
@@ -387,8 +386,8 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                     } else if frames_written == 0 {
                         // EOF — fill remainder with silence; signal ENDED to Swift poller (D-02)
                         data[written..].fill(0.0);
-                        s.is_playing = false;
-                        s.playback_state = 4; // ENDED — distinct from STOPPED so Swift can auto-advance
+                        inner_clone.control_playing.store(false, Ordering::Relaxed);
+                        inner_clone.control_state.store(4, Ordering::Relaxed); // ENDED — Swift auto-advances
                         break;
                     }
                 } else if ret != 0 && frames_written == 0 {
@@ -540,24 +539,25 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
     }
 
     state.stream = Some(stream);
-    state.is_playing = true;
-    state.playback_state = 1; // PLAYING — D-02
+    // Set atomics while still holding the decoder lock so the callback cannot observe
+    // control_playing=true before state.stream is stored.
+    arc.control_playing.store(true, Ordering::Relaxed);
+    arc.control_state.store(1, Ordering::Relaxed); // PLAYING — D-02
     0
 }
 
 /// Pauses playback without resetting position.
+/// WR-03 fix: stores to atomics only — never acquires the decoder mutex.
 #[no_mangle]
 pub extern "C" fn manzo_pause(handle: *mut ManzoHandle) {
-    // T-02-05: null guard
     if handle.is_null() {
         return;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
-    // Set flag — audio callback fills silence when is_playing is false.
-    // Stream stays alive to allow resume without rebuilding the cpal pipeline.
-    state.is_playing = false;
-    state.playback_state = 2; // PAUSED — D-02
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    // Atomic store — callback sees false on next invocation and fills silence.
+    // Stream stays alive so resume can restart without rebuilding the cpal pipeline.
+    arc.control_playing.store(false, Ordering::Relaxed);
+    arc.control_state.store(2, Ordering::Relaxed); // PAUSED — D-02
 }
 
 /// Stops playback and resets position to start.
@@ -567,11 +567,12 @@ pub extern "C" fn manzo_stop(handle: *mut ManzoHandle) {
     if handle.is_null() {
         return;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
-
-    state.is_playing = false;
-    state.playback_state = 3; // STOPPED — D-02
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    // Signal the callback to stop without waiting for the decoder lock.
+    arc.control_playing.store(false, Ordering::Relaxed);
+    arc.control_state.store(3, Ordering::Relaxed); // STOPPED — D-02
+    // Now acquire the decoder mutex to reset decoder position and drop the stream.
+    let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
     state.position_samples = 0;
 
     // Drop stream to stop CoreAudio
@@ -607,8 +608,8 @@ pub extern "C" fn manzo_seek(handle: *mut ManzoHandle, position_ms: u64) -> i32 
     if handle.is_null() {
         return -1;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
 
     let sample_pos = (position_ms * state.sample_rate as u64) / 1000;
     let mut input_byte_offset: libc::off_t = 0;
@@ -670,8 +671,8 @@ pub extern "C" fn manzo_set_eq(
     if gains.is_null() {
         return;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
     // SAFETY: caller guarantees gains points to at least 10 f32 values per the API contract
     let gain_slice = unsafe { std::slice::from_raw_parts(gains, 10) };
     // Collect clamped dB values first to avoid holding iter_mut borrow across eq_l/eq_r access
@@ -695,8 +696,8 @@ pub extern "C" fn manzo_set_volume(handle: *mut ManzoHandle, volume: f32) {
     if handle.is_null() {
         return;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
     // D-03: write target and reset ramp counter; audio callback linearly interpolates
     state.target_volume = volume.clamp(0.0_f32, 1.0_f32);
     state.vol_ramp_remaining = 441;  // ~10 ms at 44.1 kHz (D-03)
@@ -709,8 +710,8 @@ pub extern "C" fn manzo_set_pan(handle: *mut ManzoHandle, pan: f32) {
     if handle.is_null() {
         return;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let mut state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
     // D-03: write target and reset ramp counter; audio callback linearly interpolates
     state.target_pan = pan.clamp(-1.0_f32, 1.0_f32);
     state.pan_ramp_remaining = 441;  // ~10 ms at 44.1 kHz (D-03)
@@ -723,8 +724,8 @@ pub extern "C" fn manzo_get_position(handle: *mut ManzoHandle) -> u64 {
     if handle.is_null() {
         return 0;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    let state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
     if state.sample_rate == 0 {
         return 0;
     }
@@ -744,9 +745,8 @@ pub extern "C" fn manzo_get_state(handle: *mut ManzoHandle) -> i32 {
     if handle.is_null() {
         return 3;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let state = arc.lock().unwrap_or_else(|e| e.into_inner());
-    state.playback_state
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    arc.control_state.load(Ordering::Relaxed)
 }
 
 /// Returns total track duration in milliseconds (D-03), or 0 if unavailable.
@@ -760,8 +760,8 @@ pub extern "C" fn manzo_get_duration(handle: *mut ManzoHandle) -> u64 {
     if handle.is_null() {
         return 0;
     }
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
-    let state = arc.lock().unwrap_or_else(|e| e.into_inner());
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
+    let state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
     if state.sample_rate == 0 {
         return 0;
     }
@@ -790,14 +790,14 @@ pub extern "C" fn manzo_get_spectrum(
         return count;
     }
 
-    let arc = unsafe { &*(handle as *mut Arc<Mutex<InnerState>>) };
+    let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
 
     // Option A (D-10 implementation): try_lock to avoid blocking the Swift main thread.
     // The audio callback holds the mutex for ~0.3ms every ~11ms (512-sample callback at 44.1kHz).
     // On lock contention (rare), return stale data from the previously published read slot.
     // This is preferable to blocking the render thread for one frame.
     let n = count.min(75);
-    match arc.try_lock() {
+    match arc.inner.try_lock() {
         Ok(state) => {
             // Lock acquired: read the latest published read slot
             let read_slot = state.fft_read_idx.load(Ordering::Relaxed);

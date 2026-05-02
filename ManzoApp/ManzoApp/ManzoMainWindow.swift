@@ -54,7 +54,7 @@ enum ManzoColor {
 // MARK: - Geometry ------------------------------------------------------------
 
 enum ManzoMetrics {
-    static let windowW:     CGFloat = 275
+    static let windowW:     CGFloat = 480
     static let windowH:     CGFloat = 116
     static let titlebarH:   CGFloat = 14
     static let statusbarH:  CGFloat = 14
@@ -260,48 +260,79 @@ final class ManzoBodyView: NSView {
 
     override func layout() {
         super.layout()
-        let topBandH: CGFloat = 58
-        let padX: CGFloat = 14
-        let gap:  CGFloat = 14
+        // ManzoBodyView is 88pt tall (480 - 14 titlebar - 14 statusbar).
+        // It splits vertically into:
+        //   • top meta-band (54pt): LCD · marquee/specs/seek · analyzer
+        //   • bottom transport row (34pt): 6 buttons · vol · bal · EQ/PL
+        //                                  (24pt controls + 10pt bottom pad)
+        let padX: CGFloat       = 14
+        let gap:  CGFloat       = 14   // gap between LCD/meta/analyzer
+        let transportH: CGFloat = 24
+        let transportPadY: CGFloat = 10        // bottom breathing room
+        let topBandH: CGFloat = bounds.height - transportH - transportPadY  // 54
 
-        lcd.frame = NSRect(x: padX, y: bounds.height - topBandH,
+        // LCD: 86 wide, full top-band tall, left-aligned
+        lcd.frame = NSRect(x: padX,
+                           y: bounds.height - topBandH,
                            width: 86, height: topBandH)
 
+        // Analyzer 120×32, vertically centered in the top band, right-aligned
         let anaW: CGFloat = 120, anaH: CGFloat = 32
         analyzer.frame = NSRect(x: bounds.width - padX - anaW,
                                 y: bounds.height - topBandH + (topBandH - anaH) / 2,
                                 width: anaW, height: anaH)
 
+        // Meta column between LCD and analyzer:
+        //   marquee(18) · specs(12) · seek(10)  with 5pt gaps
         let metaX = lcd.frame.maxX + gap
         let metaW = analyzer.frame.minX - gap - metaX
-        let metaTop = bounds.height - 4
-        marquee.frame = NSRect(x: metaX, y: metaTop - 18, width: metaW, height: 18)
-        specs.frame   = NSRect(x: metaX, y: marquee.frame.minY - 14, width: metaW, height: 12)
-        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 8,    width: metaW, height: 10)
+        let metaTop = bounds.height - 4         // 4pt visual padding under titlebar
+        marquee.frame = NSRect(x: metaX, y: metaTop - 18,
+                               width: metaW, height: 18)
+        specs.frame   = NSRect(x: metaX, y: marquee.frame.minY - 5 - 12,
+                               width: metaW, height: 12)
+        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 5 - 10,
+                               width: metaW, height: 10)
 
-        // Transport row — 24pt tall, 10pt from bottom of body
-        let tY: CGFloat = 6
+        // ─ Transport row ─ baseline at transportPadY, controls 24pt tall.
+        let tY: CGFloat = transportPadY
+        let btnW: CGFloat = 30, btnH: CGFloat = transportH, btnGap: CGFloat = 6
         var x: CGFloat = padX
-        let btnW: CGFloat = 30, btnH: CGFloat = 24, btnGap: CGFloat = 6
+
+        // 6 transport buttons (30×24, gap 6) → 6·30 + 5·6 = 210pt
         for btn in [prev, play, pause, stop, next, eject] {
             btn.frame = NSRect(x: x, y: tY, width: btnW, height: btnH)
             x += btnW + btnGap
         }
-        // Spacer
-        x += 6
+        // visual spacer after transport
+        x += 8
+
+        // VOL label + 64pt knob
         volLabel.sizeToFit()
-        volLabel.frame.origin  = NSPoint(x: x, y: tY + (btnH - volLabel.frame.height)/2)
+        volLabel.frame.origin = NSPoint(
+            x: x, y: tY + (btnH - volLabel.frame.height) / 2)
         x += volLabel.frame.width + 6
-        volSlider.frame = NSRect(x: x, y: tY + (btnH - 8)/2, width: 64, height: 8)
-        x += 64 + 8
+        volSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2,
+                                 width: 64, height: 8)
+        x += 64 + 10
+
+        // BAL label + 40pt knob
         balLabel.sizeToFit()
-        balLabel.frame.origin  = NSPoint(x: x, y: tY + (btnH - balLabel.frame.height)/2)
+        balLabel.frame.origin = NSPoint(
+            x: x, y: tY + (btnH - balLabel.frame.height) / 2)
         x += balLabel.frame.width + 6
-        balSlider.frame = NSRect(x: x, y: tY + (btnH - 8)/2, width: 40, height: 8)
-        x += 40 + 12
-        // EQ / PL pills
-        eqBtn.frame = NSRect(x: x, y: tY, width: 24, height: btnH);  x += 24 + 4
-        plBtn.frame = NSRect(x: x, y: tY, width: 24, height: btnH)
+        balSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2,
+                                 width: 40, height: 8)
+        x += 40 + 10
+
+        // EQ / PL pills — right-anchored so they sit flush with padX.
+        // Each pill 26×24, 4pt gap.
+        let pillW: CGFloat = 26, pillGap: CGFloat = 4
+        let pillsRight = bounds.width - padX
+        plBtn.frame = NSRect(x: pillsRight - pillW,
+                             y: tY, width: pillW, height: btnH)
+        eqBtn.frame = NSRect(x: pillsRight - pillW - pillGap - pillW,
+                             y: tY, width: pillW, height: btnH)
     }
 }
 
@@ -474,16 +505,20 @@ final class KnobSlider: NSView {
             fillRect = NSRect(x: 0, y: 0, width: track.width * value, height: track.height)
         }
         ctx.saveGState()
-        NSBezierPath(roundedRect: fillRect, xRadius: 4, yRadius: 4).setClip()
-        let space = CGColorSpace(name: CGColorSpace.displayP3)!
-        let colors = [ManzoColor.tealStart.cgColor, ManzoColor.greenEnd.cgColor] as CFArray
-        if let g = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) {
-            ctx.drawLinearGradient(g,
-                                   start: CGPoint(x: track.minX, y: 0),
-                                   end:   CGPoint(x: track.maxX, y: 0),
-                                   options: [])
+        if fillRect.width < 1 {
+            ctx.restoreGState()
+        } else {
+            NSBezierPath(roundedRect: fillRect, xRadius: 4, yRadius: 4).setClip()
+            let space = CGColorSpace(name: CGColorSpace.displayP3)!
+            let colors = [ManzoColor.tealStart.cgColor, ManzoColor.greenEnd.cgColor] as CFArray
+            if let g = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) {
+                ctx.drawLinearGradient(g,
+                                       start: CGPoint(x: track.minX, y: 0),
+                                       end:   CGPoint(x: track.maxX, y: 0),
+                                       options: [])
+            }
+            ctx.restoreGState()
         }
-        ctx.restoreGState()
 
         // Thumb
         let thumbX = track.minX + track.width * value
@@ -688,6 +723,7 @@ final class SpectrumView: NSView {
         wantsLayer = true
         layer?.backgroundColor = ManzoColor.p3(0, 0, 0, 0.35).cgColor
         layer?.cornerRadius = 2
+        layer?.masksToBounds = true
         start()
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -713,18 +749,18 @@ final class SpectrumView: NSView {
             }
             for i in 0..<cols {
                 let raw = CGFloat(buf[i])
-                heights[i] += (raw - heights[i]) * 0.25
+                heights[i] = min(1.0, heights[i] + (raw - heights[i]) * 0.25)
                 if heights[i] > peaks[i] { peaks[i] = heights[i] }
                 else { peaks[i] = max(0, peaks[i] - 0.008) }
             }
         } else {
             t += 0.016
             for i in 0..<cols {
-                let target = max(0.05,
+                let target = max(0.05, min(1.0,
                     0.35 + 0.35 * sin(t*3 + CGFloat(i)*0.4) +
                     0.25 * sin(t*8 + CGFloat(i)*0.9) +
-                    0.15 * CGFloat.random(in: 0...1))
-                heights[i] += (target - heights[i]) * 0.25
+                    0.15 * CGFloat.random(in: 0...1)))
+                heights[i] = min(1.0, heights[i] + (target - heights[i]) * 0.25)
                 if heights[i] > peaks[i] { peaks[i] = heights[i] }
                 else { peaks[i] = max(0, peaks[i] - 0.008) }
             }

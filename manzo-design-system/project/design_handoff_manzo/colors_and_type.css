@@ -1,0 +1,251 @@
+/* MANZO Design System — Core tokens
+ * Extracted from ManzoApp/ (Swift/AppKit) source.
+ * All brand colors are authored in Display P3 (CLAUDE.md: "P3 colors everywhere — no sRGB").
+ * sRGB fallbacks provided as hex for broad web display; P3 variants used where available.
+ */
+
+:root {
+  /* ─────────────────────────────────────────────
+   * BASE GRADIENT — Winamp Classic (default theme)
+   * Sampled from winamp/Src/Winamp/resource/MAIN.BMP
+   * ───────────────────────────────────────────── */
+  /* Re-sampled from Winamp 2.x MAIN.BMP — the classic theme is neutral charcoal,
+     not indigo. Prior #181829/#39395A was wrong. */
+  --manzo-base-top:     color(display-p3 0.10 0.10 0.10 / 1);   /* #1A1A1A */
+  --manzo-base-bottom:  color(display-p3 0.23 0.23 0.23 / 1);   /* #3B3B3B */
+  --manzo-base-top-hex:    #1A1A1A;
+  --manzo-base-bottom-hex: #3B3B3B;
+
+  /* NEO-AERO THEME — Frutiger Aero aqua, P3-native (outside sRGB gamut) */
+  --manzo-aero-top:     color(display-p3 0.05 0.78 0.82 / 1);
+  --manzo-aero-bottom:  color(display-p3 0.02 0.52 0.60 / 1);
+
+  /* INDIGO-TEAL THEME — deep navy, OLED-optimized */
+  --manzo-indigo-top:     color(display-p3 0.04 0.09 0.20 / 1);
+  --manzo-indigo-bottom:  color(display-p3 0.10 0.22 0.28 / 1);
+
+  /* ─────────────────────────────────────────────
+   * SPECULAR + GLOW OVERLAYS (5-layer Neo-Aero stack)
+   * ───────────────────────────────────────────── */
+  --manzo-spec-top:     color(display-p3 1 1 1 / 0.50);  /* top of specular band */
+  --manzo-spec-mid:     color(display-p3 1 1 1 / 0.08);
+  --manzo-spec-btm:     color(display-p3 1 1 1 / 0);
+  --manzo-lower-glow:   color(display-p3 1 1 1 / 0.12);  /* bottom glow edge */
+  --manzo-rim:          color(display-p3 1 1 1 / 0.45);  /* 1pt inset hairline */
+
+  /* Ice-blue specular (indigoTeal variant) */
+  --manzo-spec-ice-top: color(display-p3 0.74 0.87 0.90 / 0.50);
+
+  /* ─────────────────────────────────────────────
+   * FOREGROUND / TEXT
+   * ───────────────────────────────────────────── */
+  --fg-1:          color(display-p3 1 1 1 / 1);            /* active track, primary */
+  --fg-2:          color(display-p3 0.78 0.80 0.85 / 1);   /* body, inactive track  #C7CCD9 */
+  --fg-3:          color(display-p3 0.58 0.60 0.65 / 1);   /* dim labels, toolbar  #949AA7 */
+  --fg-missing:    color(display-p3 0.50 0.52 0.55 / 0.70); /* struck-out missing file */
+  --fg-heading:    color(display-p3 0.78 0.80 0.85 / 0.70); /* empty-state heading */
+  --fg-subtle:     color(display-p3 0.78 0.80 0.85 / 0.45); /* empty-state body */
+
+  /* Separators (hairline on dark chrome) */
+  --separator:     color(display-p3 1 1 1 / 0.06);
+
+  /* ─────────────────────────────────────────────
+   * SEMANTIC / ACCENT
+   * ───────────────────────────────────────────── */
+  --accent-selection:  color(display-p3 0.15 0.45 0.85 / 0.70);  /* row selection blue */
+  --accent-spectrum:   color(display-p3 0.13 0.85 0.47 / 1);     /* green bar (SPEC.BMP top-to-bottom) */
+  --accent-spectrum-hi:color(display-p3 0.98 0.92 0.16 / 1);     /* yellow bar top */
+  --accent-peak:       color(display-p3 1 1 1 / 1);              /* peak-hold dot */
+  --accent-lcd:        color(display-p3 0.13 0.85 0.47 / 1);     /* 7-seg LCD digit */
+
+  /* ─────────────────────────────────────────────
+   * GEOMETRY
+   * ───────────────────────────────────────────── */
+  --radius-bubble: 10px;   /* main window + playlist panel corner */
+  --radius-rim:    9.5px;  /* borderWidth/2 inset */
+  --radius-inner:  3px;    /* selection pill inside row */
+  --rim-width:     1px;
+
+  /* Hairline insets */
+  --rim-inset:     0.5px;
+
+  /* ─────────────────────────────────────────────
+   * WINDOW DIMENSIONS — classic Winamp 2.x, honored in ManzoWindow.swift
+   * ───────────────────────────────────────────── */
+  --window-w:        275px;
+  --window-h:        116px;
+  --titlebar-h:      14px;
+  --body-h:          88px;
+  --statusbar-h:     14px;
+
+  --playlist-w:      350px;
+  --playlist-min-h:  60px;
+  --playlist-row-h:  24px;
+  --playlist-bar-h:  16px;
+
+  --spectrum-w:      225px;
+  --spectrum-h:      32px;
+  --spectrum-bars:   75;
+  --spectrum-levels: 16;
+  --spectrum-bar-w:  3px;
+  --spectrum-level-h:2px;
+
+  /* ─────────────────────────────────────────────
+   * ELEVATION / SHADOWS
+   * macOS borderless NSWindow shadow + inner rim highlight.
+   * ───────────────────────────────────────────── */
+  --shadow-window: 0 24px 64px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-inner-rim: inset 0 0 0 1px color(display-p3 1 1 1 / 0.45);
+  --shadow-inner-dark: inset 0 1px 0 color(display-p3 1 1 1 / 0.12),
+                       inset 0 -1px 0 rgba(0,0,0,0.40);
+
+  /* Wet-floor reflection opacity offset (D-06) */
+  --wetfloor-alpha: 0.50;
+
+  /* ─────────────────────────────────────────────
+   * TYPOGRAPHY
+   * Real app uses NSFont.systemFont — SF Pro on macOS.
+   * For marquee / LCD numerals we render bitmap sprites (text.bmp, numbers.bmp).
+   * ───────────────────────────────────────────── */
+  --font-sans:    "SF Pro Text", "SF Pro", -apple-system, BlinkMacSystemFont,
+                  "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont,
+                  "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Bitmap sprite replicas — for the title marquee and LCD we use a pixel grotesque.
+     Google Fonts substitutions (real app renders sprites from text.bmp / numbers.bmp):
+       Title marquee : "VT323"       (closest to Winamp 5x8 pixel font)
+       LCD digits    : "Press Start 2P" / "VT323"
+     FLAG → ask user for titlebar-font.png + numbers.bmp extraction. */
+  --font-pixel:   "VT323", "Press Start 2P", ui-monospace, monospace;
+  --font-lcd:     "VT323", ui-monospace, monospace;
+
+  /* Sizes — the real app calls NSFont.systemFont(ofSize: …). */
+  --fs-title:      11px;    /* "PLAYLIST EDITOR" titlebar label */
+  --fs-body:       11px;    /* row text, toolbar, track count  */
+  --fs-heading:    13px;    /* empty-state heading             */
+  --fs-marquee:    12px;    /* main-window title marquee       */
+  --fs-lcd:        24px;    /* track timer (numbers.bmp scale) */
+  --fs-mini:       9px;     /* 4-char EQ/vis badges            */
+
+  --lh-tight:      1.0;
+  --lh-body:       1.3;
+  --ls-caps:       0.06em;
+  --ls-none:       0;
+
+  /* ─────────────────────────────────────────────
+   * MOTION
+   * Winamp-era UI: instantaneous. MANZO adds ONE motion primitive: CADisplayLink ~60fps
+   * for the spectrum. Style transitions (theme swap) ARE animated implicitly by CALayer
+   * default 0.25s linear when rasterizationScale is invalidated.
+   * ───────────────────────────────────────────── */
+  --ease-layer:      linear;              /* CALayer default */
+  --ease-standard:   cubic-bezier(.25,.1,.25,1);
+  --dur-instant:     0ms;
+  --dur-fast:        120ms;
+  --dur-theme-swap:  250ms;  /* invalidateNeoAeroRasterization() implicit CALayer anim */
+  --dur-marquee:     8s;     /* full title scroll, ~30 chars at 25fps */
+  --dur-peak-fall:   ~1.1;   /* Winamp draw_sa.cpp: spfo = 1.1 per frame */
+}
+
+/* ─────────────────────────────────────────────
+ * SEMANTIC TEXT ROLES
+ * ───────────────────────────────────────────── */
+
+.manzo-h1,
+.manzo-title-caps {
+  font-family: var(--font-sans);
+  font-size: var(--fs-title);
+  font-weight: 500;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.manzo-h2 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-heading);
+  font-weight: 400;
+  color: var(--fg-heading);
+}
+
+.manzo-body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--fg-2);
+}
+
+.manzo-dim {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--fg-3);
+}
+
+.manzo-active {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--fg-1);
+}
+
+.manzo-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.manzo-lcd {
+  font-family: var(--font-lcd);
+  font-size: var(--fs-lcd);
+  color: var(--accent-lcd);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 8px color(display-p3 0.13 0.85 0.47 / 0.35),
+    0 0 2px color(display-p3 0.13 0.85 0.47 / 0.70);
+}
+
+.manzo-marquee {
+  font-family: var(--font-pixel);
+  font-size: var(--fs-marquee);
+  color: var(--fg-2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+ * THE NEO-AERO STACK (faux-5-layer) AS A CSS CLASS
+ * In Swift this is CALayer + 4 CAGradientLayer sublayers (NeoAeroLayerFactory).
+ * On the web we fake the stack with layered ::before / ::after + box-shadow rim.
+ * ───────────────────────────────────────────── */
+.neo-aero {
+  position: relative;
+  background:
+    /* lower glow (bottom 25%) */
+    linear-gradient(to top,
+      color(display-p3 1 1 1 / 0.12) 0%,
+      color(display-p3 1 1 1 / 0) 25%),
+    /* specular band (top 52%, 3-stop) */
+    linear-gradient(to bottom,
+      color(display-p3 1 1 1 / 0.50) 0%,
+      color(display-p3 1 1 1 / 0.08) 23%,
+      color(display-p3 1 1 1 / 0) 52%),
+    /* base gradient */
+    linear-gradient(to bottom, var(--manzo-base-top), var(--manzo-base-bottom));
+  border-radius: var(--radius-bubble);
+  box-shadow: var(--shadow-inner-rim), var(--shadow-window);
+  color: var(--fg-2);
+}
+
+.neo-aero--aero {
+  background:
+    linear-gradient(to top, color(display-p3 1 1 1 / 0.12) 0%, color(display-p3 1 1 1 / 0) 25%),
+    linear-gradient(to bottom, color(display-p3 1 1 1 / 0.50) 0%, color(display-p3 1 1 1 / 0.08) 23%, color(display-p3 1 1 1 / 0) 52%),
+    linear-gradient(to bottom, var(--manzo-aero-top), var(--manzo-aero-bottom));
+}
+
+.neo-aero--indigo {
+  background:
+    linear-gradient(to top, color(display-p3 1 1 1 / 0.12) 0%, color(display-p3 1 1 1 / 0) 25%),
+    linear-gradient(to bottom, var(--manzo-spec-ice-top) 0%, color(display-p3 0.74 0.87 0.90 / 0.08) 23%, color(display-p3 0.74 0.87 0.90 / 0) 52%),
+    linear-gradient(to bottom, var(--manzo-indigo-top), var(--manzo-indigo-bottom));
+}

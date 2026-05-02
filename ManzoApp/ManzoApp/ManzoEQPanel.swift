@@ -117,7 +117,7 @@ public final class ManzoEQPanel: NSPanel {
 public final class ManzoEQView: NSView {
 
     // MARK: Geometry
-    public static let intrinsicSize = NSSize(width: 275, height: 168)
+    public static let intrinsicSize = NSSize(width: 480, height: 168)
     private let padding   : CGFloat = 8
     private let topRowH   : CGFloat = 30
     private let gridH     : CGFloat = 110

@@ -34,6 +34,7 @@ int32_t manzo_play(struct manzo_ManzoHandle *handle);
 
 /**
  * Pauses playback without resetting position.
+ * WR-03 fix: stores to atomics only — never acquires the decoder mutex.
  */
 void manzo_pause(struct manzo_ManzoHandle *handle);
 

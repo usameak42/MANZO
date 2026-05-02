@@ -1,0 +1,324 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Main window</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .mw {
+    width: 100%; max-width: 440px;
+    margin: 0 auto;
+    display: flex; flex-direction: column;
+    border-radius: 8px;
+    overflow: hidden;
+    background:
+      linear-gradient(to bottom,
+        color(display-p3 0.22 0.23 0.26) 0%,
+        color(display-p3 0.14 0.15 0.18) 40%,
+        color(display-p3 0.10 0.11 0.14) 100%);
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 1 1 1 / 0.08),
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.18),
+      0 10px 28px rgba(0,0,0,0.5),
+      0 2px 4px rgba(0,0,0,0.4);
+    font-family: ui-monospace, "SF Mono", monospace;
+  }
+
+  /* Titlebar with traffic lights */
+  .mw-title {
+    height: 22px;
+    display: flex; align-items: center;
+    padding: 0 10px;
+    background:
+      linear-gradient(to bottom,
+        color(display-p3 0.30 0.31 0.35) 0%,
+        color(display-p3 0.18 0.19 0.22) 100%);
+    box-shadow: inset 0 -1px 0 color(display-p3 0 0 0 / 0.5);
+    position: relative;
+  }
+  .mw-title .lights { display: flex; gap: 6px; }
+  .mw-title .tl {
+    width: 11px; height: 11px; border-radius: 50%;
+    box-shadow:
+      inset 0 0 0 0.5px color(display-p3 0 0 0 / 0.5),
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.35);
+  }
+  .mw-title .tl--r { background: color(display-p3 0.95 0.35 0.33); }
+  .mw-title .tl--y { background: color(display-p3 0.98 0.76 0.25); }
+  .mw-title .tl--g { background: color(display-p3 0.30 0.80 0.30); }
+  .mw-title .label {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: color(display-p3 0.82 0.84 0.88);
+  }
+
+  /* Main body — LCD + marquee + spectrum */
+  .mw-body {
+    padding: 8px 10px 6px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .mw-lcd {
+    font-family: "VT323", ui-monospace, monospace;
+    font-size: 26px;
+    color: color(display-p3 0.18 0.95 0.42);
+    text-shadow: 0 0 6px color(display-p3 0.18 0.95 0.42 / 0.65);
+    padding: 2px 8px;
+    background: color(display-p3 0 0 0 / 0.5);
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.6), inset 0 1px 3px rgba(0,0,0,0.6);
+    letter-spacing: 0.04em;
+  }
+  .mw-marquee { display: flex; flex-direction: column; gap: 2px; overflow: hidden; min-width: 0; }
+  .mw-marquee .title {
+    font-family: ui-monospace, monospace;
+    font-size: 11px; color: color(display-p3 0.92 0.94 0.98);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mw-marquee .meta {
+    font-size: 9.5px; color: color(display-p3 0.58 0.62 0.70);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Spectrum analyzer — 20 bars */
+  .mw-spectrum {
+    display: flex; align-items: flex-end; gap: 1px;
+    height: 32px; width: 92px;
+    padding: 2px;
+    background: color(display-p3 0 0 0 / 0.55);
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.6);
+  }
+  .mw-spectrum .bar {
+    flex: 1;
+    background: linear-gradient(to top,
+      color(display-p3 0.13 0.85 0.47) 0%,
+      color(display-p3 0.13 0.85 0.47) 50%,
+      color(display-p3 1 0.85 0.20) 72%,
+      color(display-p3 0.95 0.30 0.25) 100%);
+    box-shadow: 0 0 2px color(display-p3 0.13 0.85 0.47 / 0.4);
+    animation: specBar 0.9s ease-in-out infinite alternate;
+  }
+  @keyframes specBar { from { height: 20%; } to { height: 90%; } }
+
+  /* Seek bar row */
+  .mw-seek-row { padding: 2px 10px 8px; }
+  .mw-seek {
+    height: 5px; background: color(display-p3 0 0 0 / 0.5); border-radius: 3px;
+    position: relative;
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.6);
+  }
+  .mw-seek .fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 55%;
+    background: linear-gradient(to right, color(display-p3 0.05 0.78 0.82), color(display-p3 0.13 0.85 0.47));
+    border-radius: 3px;
+  }
+  .mw-seek .thumb {
+    position: absolute; left: 55%; top: -4px; width: 10px; height: 13px;
+    background: #fff; border-radius: 2px; transform: translateX(-50%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  /* Transport row */
+  .mw-controls {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px 10px;
+  }
+  .mw-transport {
+    display: flex; gap: 2px;
+    padding: 2px;
+    background: color(display-p3 0 0 0 / 0.35);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.5);
+  }
+  .mw-btn {
+    width: 26px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      linear-gradient(to bottom,
+        color(display-p3 0.58 0.60 0.66) 0%,
+        color(display-p3 0.42 0.44 0.50) 50%,
+        color(display-p3 0.28 0.30 0.36) 100%);
+    box-shadow:
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.45),
+      inset 0 -1px 0 color(display-p3 0 0 0 / 0.45),
+      inset 1px 0 0 color(display-p3 1 1 1 / 0.15),
+      inset -1px 0 0 color(display-p3 0 0 0 / 0.30),
+      0 0 0 1px color(display-p3 0 0 0 / 0.6);
+    border-radius: 1px;
+    cursor: pointer;
+    color: color(display-p3 0.10 0.11 0.14);
+  }
+  .mw-btn:hover { filter: brightness(1.08); }
+  .mw-btn:active {
+    background:
+      linear-gradient(to bottom,
+        color(display-p3 0.28 0.30 0.36) 0%,
+        color(display-p3 0.42 0.44 0.50) 60%,
+        color(display-p3 0.58 0.60 0.66) 100%);
+    box-shadow:
+      inset 0 1px 0 color(display-p3 0 0 0 / 0.35),
+      inset 0 -1px 0 color(display-p3 1 1 1 / 0.25),
+      0 0 0 1px color(display-p3 0 0 0 / 0.6);
+  }
+  .mw-btn svg { display: block; }
+
+  /* Volume slider */
+  .mw-vol {
+    display: flex; align-items: center; gap: 6px;
+    flex: 1; min-width: 0;
+  }
+  .mw-vol .lbl {
+    font-size: 9px; color: color(display-p3 0.70 0.75 0.82);
+    text-transform: uppercase; letter-spacing: 0.10em;
+  }
+  .mw-vol .track {
+    flex: 1; height: 6px;
+    background: color(display-p3 0 0 0 / 0.55); border-radius: 3px;
+    position: relative; min-width: 50px;
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.55);
+  }
+  .mw-vol .track .vfill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 70%;
+    background: linear-gradient(to right, color(display-p3 0.05 0.60 0.58), color(display-p3 0.13 0.85 0.47));
+    border-radius: 3px;
+  }
+  .mw-vol .track .vthumb {
+    position: absolute; left: 70%; top: -3px; width: 8px; height: 12px;
+    background: linear-gradient(to bottom, color(display-p3 0.9 0.92 0.96), color(display-p3 0.55 0.58 0.64));
+    border-radius: 1px; transform: translateX(-50%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6);
+  }
+
+  /* EQ / PL toggles */
+  .mw-toggles { display: flex; gap: 3px; }
+  .mw-tog {
+    min-width: 28px; padding: 3px 6px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    background:
+      linear-gradient(to bottom,
+        color(display-p3 0.22 0.23 0.27) 0%,
+        color(display-p3 0.12 0.13 0.17) 100%);
+    color: color(display-p3 0.62 0.65 0.72);
+    border-radius: 1px;
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.65),
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.12);
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+  }
+  .mw-tog.is-on {
+    color: #fff;
+    background: linear-gradient(to bottom, color(display-p3 0.08 0.68 0.72), color(display-p3 0.04 0.42 0.50));
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.6),
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.3),
+      0 0 6px color(display-p3 0.08 0.68 0.72 / 0.5);
+  }
+
+  /* Status bar */
+  .mw-status {
+    height: 16px;
+    background: color(display-p3 0 0 0 / 0.40);
+    padding: 0 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 9px; color: color(display-p3 0.58 0.60 0.65);
+    text-transform: uppercase; letter-spacing: 0.10em;
+    box-shadow: inset 0 1px 0 color(display-p3 0 0 0 / 0.5);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mw">
+    <!-- Titlebar — traffic lights left, MANZO centered -->
+    <div class="mw-title">
+      <div class="lights">
+        <div class="tl tl--r" title="close"></div>
+        <div class="tl tl--y" title="minimize"></div>
+        <div class="tl tl--g" title="maximize"></div>
+      </div>
+      <div class="label">MANZO</div>
+    </div>
+
+    <!-- Body: LCD + marquee + spectrum analyzer -->
+    <div class="mw-body">
+      <div class="mw-lcd">2:47</div>
+      <div class="mw-marquee">
+        <div class="title">★ 03. Bump — Rustie</div>
+        <div class="meta">Glass Swords · 320 kbps · 44 khz · stereo</div>
+      </div>
+      <div class="mw-spectrum" aria-label="spectrum analyzer">
+        <div class="bar" style="animation-delay:-0.1s"></div>
+        <div class="bar" style="animation-delay:-0.2s"></div>
+        <div class="bar" style="animation-delay:-0.3s"></div>
+        <div class="bar" style="animation-delay:-0.4s"></div>
+        <div class="bar" style="animation-delay:-0.5s"></div>
+        <div class="bar" style="animation-delay:-0.6s"></div>
+        <div class="bar" style="animation-delay:-0.7s"></div>
+        <div class="bar" style="animation-delay:-0.8s"></div>
+        <div class="bar" style="animation-delay:-0.9s"></div>
+        <div class="bar" style="animation-delay:-1.0s"></div>
+        <div class="bar" style="animation-delay:-1.1s"></div>
+        <div class="bar" style="animation-delay:-1.2s"></div>
+        <div class="bar" style="animation-delay:-1.3s"></div>
+        <div class="bar" style="animation-delay:-1.4s"></div>
+        <div class="bar" style="animation-delay:-1.5s"></div>
+        <div class="bar" style="animation-delay:-1.6s"></div>
+        <div class="bar" style="animation-delay:-1.7s"></div>
+        <div class="bar" style="animation-delay:-1.8s"></div>
+        <div class="bar" style="animation-delay:-1.9s"></div>
+        <div class="bar" style="animation-delay:-2.0s"></div>
+      </div>
+    </div>
+
+    <!-- Seek bar -->
+    <div class="mw-seek-row">
+      <div class="mw-seek">
+        <div class="fill"></div>
+        <div class="thumb"></div>
+      </div>
+    </div>
+
+    <!-- Transport + volume + EQ/PL -->
+    <div class="mw-controls">
+      <div class="mw-transport">
+        <!-- |<< -->
+        <div class="mw-btn" title="prev"><svg width="12" height="10" viewBox="0 0 12 10"><polygon points="1,5 6,1 6,9" fill="currentColor"/><polygon points="6,5 11,1 11,9" fill="currentColor"/></svg></div>
+        <!-- PLAY -->
+        <div class="mw-btn" title="play"><svg width="9" height="10" viewBox="0 0 9 10"><polygon points="1,1 8,5 1,9" fill="currentColor"/></svg></div>
+        <!-- PAUSE -->
+        <div class="mw-btn" title="pause"><svg width="8" height="10" viewBox="0 0 8 10"><rect x="1" y="1" width="2" height="8" fill="currentColor"/><rect x="5" y="1" width="2" height="8" fill="currentColor"/></svg></div>
+        <!-- STOP -->
+        <div class="mw-btn" title="stop"><svg width="8" height="8" viewBox="0 0 8 8"><rect x="0" y="0" width="8" height="8" fill="currentColor"/></svg></div>
+        <!-- >>| -->
+        <div class="mw-btn" title="next"><svg width="12" height="10" viewBox="0 0 12 10"><polygon points="1,1 6,5 1,9" fill="currentColor"/><polygon points="6,1 11,5 6,9" fill="currentColor"/></svg></div>
+        <!-- EJECT -->
+        <div class="mw-btn" title="eject"><svg width="9" height="10" viewBox="0 0 9 10"><polygon points="4.5,1 1,6 8,6" fill="currentColor"/><rect x="1" y="7.5" width="7" height="1.5" fill="currentColor"/></svg></div>
+      </div>
+
+      <div class="mw-vol">
+        <span class="lbl">Vol</span>
+        <div class="track">
+          <div class="vfill"></div>
+          <div class="vthumb"></div>
+        </div>
+      </div>
+
+      <div class="mw-toggles">
+        <a class="mw-tog is-on" href="components-equalizer.html" title="open equalizer">EQ</a>
+        <a class="mw-tog" href="components-playlist.html" title="open playlist">PL</a>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="mw-status">
+      <span>▶ Playing</span>
+      <span>SHUFFLE · REPEAT</span>
+    </div>
+  </div>
+
+  <div class="tag">Titlebar (traffic lights + MANZO) · LCD + marquee + spectrum · seek · transport |◀◀ ▶ ❚❚ ■ ▶▶| ⏏ · volume · EQ / PL · status</div>
+</div>
+</body></html>

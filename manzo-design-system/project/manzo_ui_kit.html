@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MANZO · UI Kit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    color: var(--fg-2);
+    /* A desktop-alike background so windows feel like floating NSWindows */
+    background:
+      radial-gradient(1200px 800px at 20% 10%, #2a2a3c 0%, transparent 60%),
+      radial-gradient(900px 700px at 80% 90%, #20202d 0%, transparent 55%),
+      linear-gradient(160deg, #14141d 0%, #0a0a10 100%);
+    min-height: 100%;
+    padding: 56px 48px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    align-items: center;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 820px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    align-items: center;
+  }
+
+  /* ─ Window chrome ─ */
+  .win {
+    position: relative;
+    border-radius: var(--radius-bubble);
+    overflow: hidden;
+    color: var(--fg-2);
+    background:
+      linear-gradient(to top, color(display-p3 1 1 1 / 0.12) 0%, color(display-p3 1 1 1 / 0) 25%),
+      linear-gradient(to bottom, color(display-p3 1 1 1 / 0.50) 0%, color(display-p3 1 1 1 / 0.08) 23%, color(display-p3 1 1 1 / 0) 52%),
+      var(--base);
+    box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.45), 0 24px 64px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+  }
+  .win[data-theme="classic"] { --base: linear-gradient(to bottom, color(display-p3 0.10 0.10 0.10), color(display-p3 0.23 0.23 0.23)); }
+  .win[data-theme="aero"]    { --base: linear-gradient(to bottom, color(display-p3 0.05 0.78 0.82), color(display-p3 0.02 0.52 0.60)); }
+  .win[data-theme="indigo"]  { --base: linear-gradient(to bottom, color(display-p3 0.04 0.09 0.20), color(display-p3 0.10 0.22 0.28)); }
+
+  /* titlebar (14pt) */
+  .titlebar {
+    height: 14px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px;
+    background: color(display-p3 1 1 1 / 0.08);
+    font-size: 9px; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    user-select: none;
+  }
+  .titlebar .marks { display:flex; gap:6px; }
+  .titlebar .dot { width:8px; height:8px; border-radius:50%; background: color(display-p3 1 1 1 / 0.12); box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.18); }
+  .titlebar .dot--close { background: color(display-p3 1 0.38 0.32); }
+  .titlebar .dot--min   { background: color(display-p3 1 0.78 0.15); }
+  .titlebar .dot--max   { background: color(display-p3 0.32 0.80 0.30); }
+
+  .statusbar {
+    height: 14px; padding: 0 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: color(display-p3 0 0 0 / 0.28);
+    font-size: 9px; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    border-top: 1px solid color(display-p3 1 1 1 / 0.04);
+  }
+  .statusbar .badge { padding: 0 4px; border-radius: 2px; background: color(display-p3 1 1 1 / 0.06); }
+  .statusbar .badge--on { color: #fff; background: color(display-p3 0.15 0.45 0.85 / 0.55); }
+
+  /* main window body (88pt) */
+  .main {
+    width: 480px;
+  }
+  .main .body {
+    height: 88px; display: flex; align-items: center; padding: 0 14px; gap: 14px;
+  }
+  .lcd-big {
+    font-family: "VT323", ui-monospace, monospace;
+    font-size: 34px;
+    color: color(display-p3 0.13 0.85 0.47);
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 10px color(display-p3 0.13 0.85 0.47 / 0.35), 0 0 2px color(display-p3 0.13 0.85 0.47 / 0.70);
+    min-width: 86px;
+  }
+  .meta { flex: 1; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+  .marquee-wrap { height: 18px; overflow: hidden; position: relative; }
+  .marquee {
+    font-family: "VT323", ui-monospace, monospace;
+    font-size: 16px; color: color(display-p3 0.85 0.88 0.93);
+    letter-spacing: 0.02em; white-space: nowrap;
+    animation: scroll 14s linear infinite;
+  }
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .specs {
+    font-size: 9px; color: var(--fg-3); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .seek {
+    height: 4px; background: color(display-p3 0 0 0 / 0.45); border-radius: 2px; position: relative; margin-top: 2px;
+  }
+  .seek__fill {
+    position: absolute; inset: 0 auto 0 0; width: 48%;
+    background: linear-gradient(to right, color(display-p3 0.05 0.78 0.82), color(display-p3 0.13 0.85 0.47));
+    border-radius: 2px;
+  }
+  .seek__thumb {
+    position: absolute; top: -3px; left: 48%; width: 8px; height: 10px; background: #fff;
+    transform: translateX(-50%); border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  .analyzer {
+    width: 120px; height: 32px;
+    display: flex; align-items: flex-end; gap: 0;
+    padding: 2px;
+    background: color(display-p3 0 0 0 / 0.35);
+    border-radius: 2px; position: relative;
+    box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.08);
+  }
+  .analyzer .col { flex: 1; position: relative; height: 100%; display: flex; align-items: flex-end; }
+  .analyzer .bar {
+    width: 100%;
+    background: linear-gradient(to top,
+      color(display-p3 0.13 0.85 0.47) 0%,
+      color(display-p3 0.98 0.92 0.16) 65%,
+      color(display-p3 1 0.35 0.20) 100%);
+  }
+  .analyzer .peak {
+    position: absolute; left: 0; right: 0; height: 2px; background: #fff;
+  }
+
+  /* Transport row */
+  .transport { display: flex; gap: 6px; align-items: center; padding: 0 14px 10px; }
+  .btn {
+    all: unset;
+    width: 30px; height: 24px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border-radius: 4px;
+    background: linear-gradient(to bottom, color(display-p3 1 1 1 / 0.14), color(display-p3 1 1 1 / 0.03));
+    box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.22), inset 0 1px 0 color(display-p3 1 1 1 / 0.30);
+    cursor: pointer;
+    color: var(--fg-2);
+  }
+  .btn:hover  { background: linear-gradient(to bottom, color(display-p3 1 1 1 / 0.24), color(display-p3 1 1 1 / 0.06)); color: #fff; }
+  .btn:active { background: color(display-p3 0 0 0 / 0.3); box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.15), inset 0 1px 2px rgba(0,0,0,0.5); }
+  .btn--on { background: linear-gradient(to bottom, color(display-p3 0.15 0.45 0.85 / 0.85), color(display-p3 0.10 0.30 0.60 / 0.9)); color: #fff; box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.35), inset 0 -1px 0 rgba(0,0,0,0.3); }
+  .btn svg { display: block; }
+  .spacer { width: 1px; height: 16px; background: color(display-p3 1 1 1 / 0.14); margin: 0 6px; }
+
+  .knob {
+    width: 64px; height: 8px; background: color(display-p3 0 0 0 / 0.35); border-radius: 4px; position: relative;
+    box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.08);
+  }
+  .knob__fill { position:absolute; inset:0 auto 0 0; width:70%; background: linear-gradient(to right, color(display-p3 0.05 0.78 0.82), color(display-p3 0.13 0.85 0.47)); border-radius: 4px; }
+  .knob__thumb { position:absolute; left:70%; top:-3px; width:10px; height:14px; background:#e5e7ee; border-radius: 2px; transform: translateX(-50%); box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4); }
+
+  /* Playlist window */
+  .playlist { width: 480px; }
+  .prow {
+    height: 24px; padding: 0 12px;
+    display: flex; align-items: center;
+    font-size: 11px; color: color(display-p3 0.78 0.80 0.85);
+    border-bottom: 1px solid color(display-p3 1 1 1 / 0.03);
+    cursor: default; user-select: none;
+  }
+  .prow .idx { width: 28px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .prow .time { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--fg-3); }
+  .prow:hover { background: color(display-p3 1 1 1 / 0.03); }
+  .prow--active { background: color(display-p3 0.15 0.45 0.85 / 0.70); color:#fff; margin: 0 4px; border-radius: 3px; border-bottom: none; }
+  .prow--active .idx, .prow--active .time { color: rgba(255,255,255,0.9); }
+  .prow--missing { color: color(display-p3 0.50 0.52 0.55 / 0.75); text-decoration: line-through; }
+  .prow--missing .idx, .prow--missing .time { color: inherit; }
+
+  .ptoolbar {
+    height: 22px; padding: 0 10px;
+    display: flex; align-items: center; gap: 6px;
+    background: color(display-p3 0 0 0 / 0.20);
+    border-bottom: 1px solid color(display-p3 1 1 1 / 0.04);
+    font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .ptoolbar .ghost {
+    padding: 2px 6px; border-radius: 3px;
+    background: color(display-p3 1 1 1 / 0.04);
+    cursor: pointer;
+  }
+  .ptoolbar .ghost:hover { color: #fff; background: color(display-p3 1 1 1 / 0.10); }
+  .ptoolbar .sep { width:1px; height:10px; background: color(display-p3 1 1 1 / 0.10); }
+
+  /* ───────── Equalizer — Winamp-accurate rebuild (Eqmain.bmp reference) ─────────
+     Width matches sibling windows (480); adds EQ curve graph, LED buttons,
+     colored track fill, ribbed square thumbs, tick marks, +12/0/−12 reference
+     lines, fully-visible preamp column, navy textured backdrop. */
+  .eq { width: 480px; }
+  .eq .body {
+    padding: 12px 14px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    /* Dark navy textured backdrop — not flat black */
+    background:
+      linear-gradient(to bottom, color(display-p3 0.04 0.07 0.14) 0%, color(display-p3 0.06 0.10 0.18) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+    box-shadow:
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.06),
+      inset 0 -1px 0 color(display-p3 0 0 0 / 0.5),
+      inset 0 0 24px color(display-p3 0 0 0 / 0.35);
+  }
+
+  /* Top row: LED buttons · curve graph · PRESETS */
+  .eq .top-row { display: flex; align-items: stretch; gap: 8px; height: 44px; }
+
+  .eq .led-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 8px 0 6px;
+    background: linear-gradient(to bottom, color(display-p3 0.18 0.20 0.26), color(display-p3 0.10 0.12 0.16));
+    border-radius: 2px;
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.6),
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.15),
+      inset 0 -1px 0 color(display-p3 0 0 0 / 0.5);
+    font-family: ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: color(display-p3 0.78 0.80 0.85);
+    cursor: pointer; user-select: none;
+    min-width: 52px; justify-content: center;
+  }
+  .eq .led {
+    width: 7px; height: 7px;
+    background: color(display-p3 0.06 0.10 0.04);
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.8);
+    border-radius: 1px;
+    flex: 0 0 auto;
+  }
+  .eq .led-btn.is-on .led {
+    background: color(display-p3 0.18 0.95 0.35);
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0.10 0.40 0.15),
+      inset 0 0 2px color(display-p3 1 1 1 / 0.7),
+      0 0 4px color(display-p3 0.18 0.95 0.35 / 0.9);
+  }
+
+  .eq .curve-graph {
+    flex: 1; position: relative;
+    background:
+      linear-gradient(to bottom, color(display-p3 0 0 0 / 0.65), color(display-p3 0 0 0 / 0.85));
+    border-radius: 2px;
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.7),
+      inset 0 1px 0 color(display-p3 0 0 0 / 0.4),
+      inset 0 -1px 0 color(display-p3 1 1 1 / 0.05);
+    overflow: hidden;
+  }
+  .eq .curve-graph svg { display: block; width: 100%; height: 100%; }
+  .eq .curve-graph .zero-line {
+    position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+    background: color(display-p3 0.18 0.95 0.35 / 0.22);
+  }
+
+  .eq .presets-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0 12px;
+    background: linear-gradient(to bottom, color(display-p3 0.18 0.20 0.26), color(display-p3 0.10 0.12 0.16));
+    border-radius: 2px;
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.6),
+      inset 0 1px 0 color(display-p3 1 1 1 / 0.15),
+      inset 0 -1px 0 color(display-p3 0 0 0 / 0.5);
+    font-family: ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: color(display-p3 0.78 0.80 0.85);
+    cursor: pointer; user-select: none;
+    min-width: 68px;
+  }
+  .eq .presets-btn small { font-size: 8px; color: var(--fg-3); letter-spacing: 0.12em; margin-top: 2px; }
+
+  /* ───────── Slider grid ───────── */
+  .eq .slider-grid {
+    display: flex; gap: 2px; align-items: stretch;
+    height: 128px;
+    padding: 0;
+  }
+
+  /* Left rail — dB scale */
+  .eq .db-scale {
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 3px 4px 12px 2px;
+    font-family: ui-monospace, monospace;
+    font-size: 8.5px;
+    color: color(display-p3 0.70 0.75 0.82);
+    letter-spacing: 0.02em;
+    text-transform: lowercase;
+    flex: 0 0 36px;
+    text-align: right;
+  }
+
+  /* Preamp column — fully visible, separate from bands */
+  .eq .preamp-col { flex: 0 0 30px; }
+  .eq .preamp-gap { flex: 0 0 6px; }
+
+  /* Each band column (preamp or band) */
+  .eq .col-band {
+    display: flex; flex-direction: column;
+    flex: 1;
+    min-width: 24px;
+  }
+  .eq .col-band .slider-wrap {
+    flex: 1; position: relative;
+    background:
+      /* recessed groove */
+      linear-gradient(to right,
+        color(display-p3 0 0 0 / 0.55) 0%,
+        color(display-p3 0 0 0 / 0.30) 50%,
+        color(display-p3 0 0 0 / 0.55) 100%);
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.5),
+      inset 1px 0 0 color(display-p3 1 1 1 / 0.03),
+      inset 0 1px 2px color(display-p3 0 0 0 / 0.6);
+    /* Ruler tick marks on sides — every 1.5 dB or so */
+    background-image:
+      linear-gradient(to right,
+        color(display-p3 0 0 0 / 0.55) 0%, color(display-p3 0 0 0 / 0.30) 50%, color(display-p3 0 0 0 / 0.55) 100%),
+      repeating-linear-gradient(0deg,
+        transparent 0 calc(100% / 16 - 1px),
+        color(display-p3 0.60 0.65 0.70 / 0.35) calc(100% / 16 - 1px) calc(100% / 16));
+  }
+  /* Reference lines: +12 (top), 0 (mid), −12 (bot) — drawn by pseudo elements */
+  .eq .col-band .slider-wrap::before {
+    content: ""; position: absolute; left: -1px; right: -1px; top: 50%; height: 1px;
+    background: color(display-p3 0.18 0.95 0.35 / 0.28);
+    pointer-events: none; z-index: 0;
+  }
+  .eq .col-band .slider-wrap::after {
+    /* +12 top dashed + -12 bot dashed (paired) */
+    content:"";
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+    background:
+      linear-gradient(to right, color(display-p3 1 1 1 / 0.12) 50%, transparent 50%) top/6px 1px repeat-x,
+      linear-gradient(to right, color(display-p3 1 1 1 / 0.12) 50%, transparent 50%) bottom/6px 1px repeat-x;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Colored fill — yellow when boosted (above 0), green when 0 or cut */
+  .eq .fill {
+    position: absolute; left: 3px; right: 3px;
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 1;
+    box-shadow: inset 0 0 0 1px color(display-p3 0 0 0 / 0.35);
+  }
+  .eq .fill--boost {
+    background: linear-gradient(to bottom,
+      color(display-p3 1 0.90 0.20) 0%,
+      color(display-p3 0.95 0.75 0.10) 50%,
+      color(display-p3 0.60 0.45 0.05) 100%);
+    bottom: 50%; /* top at thumb, bottom at zero line */
+  }
+  .eq .fill--cut {
+    background: linear-gradient(to bottom,
+      color(display-p3 0.18 0.85 0.32) 0%,
+      color(display-p3 0.10 0.55 0.20) 50%,
+      color(display-p3 0.06 0.30 0.10) 100%);
+    top: 50%; /* starts at zero line */
+  }
+  .eq .fill--at-zero {
+    background: color(display-p3 0.18 0.85 0.32);
+    height: 2px; top: calc(50% - 1px);
+  }
+
+  /* Square ribbed thumb — the key Winamp signature */
+  .eq .thumb {
+    position: absolute; left: 1px; right: 1px;
+    height: 11px;
+    background:
+      linear-gradient(to bottom,
+        color(display-p3 0.85 0.85 0.88) 0%,
+        color(display-p3 0.70 0.71 0.75) 50%,
+        color(display-p3 0.48 0.49 0.53) 100%);
+    box-shadow:
+      inset 0 0 0 1px color(display-p3 0 0 0 / 0.75),
+      inset 1px 0 0 color(display-p3 1 1 1 / 0.4),
+      0 1px 2px color(display-p3 0 0 0 / 0.5);
+    z-index: 2;
+    border-radius: 0;
+    cursor: ns-resize;
+  }
+  /* Horizontal etched ribs ≡ */
+  .eq .thumb::before {
+    content: ""; position: absolute; left: 2px; right: 2px; top: 2px; bottom: 2px;
+    background:
+      repeating-linear-gradient(0deg,
+        color(display-p3 0 0 0 / 0.35) 0 1px,
+        color(display-p3 1 1 1 / 0.30) 1px 2px);
+    opacity: 0.55;
+  }
+
+  .eq .band-label {
+    text-align: center; font-family: ui-monospace, monospace;
+    font-size: 8.5px; color: color(display-p3 0.70 0.75 0.82);
+    letter-spacing: 0.02em;
+    padding: 3px 0 0;
+    text-transform: lowercase;
+  }
+  .eq .preamp-label-below {
+    text-align: center; font-family: ui-monospace, monospace;
+    font-size: 8.5px; color: color(display-p3 0.90 0.60 0.20);
+    letter-spacing: 0.08em;
+    padding: 3px 0 0;
+    text-transform: uppercase;
+  }
+
+  /* Scale-to-fit wrapper for narrow viewports */
+  .labels-top {
+    position: absolute; top: -30px; left: 0; right: 0;
+    text-align: center;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 10px; color: var(--fg-3);
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+
+  .stack-sidebyside {
+    display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+  }
+
+  /* Theme toggle */
+  .theme-chip-row {
+    position: fixed; top: 18px; right: 18px;
+    display: flex; gap: 6px;
+    padding: 6px;
+    background: color(display-p3 0 0 0 / 0.35);
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.08), 0 4px 16px rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  .theme-chip {
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.35), 0 2px 6px rgba(0,0,0,0.4);
+    border: 2px solid transparent;
+  }
+  .theme-chip--active { border-color: #fff; }
+  .theme-chip[data-theme="classic"] { background: linear-gradient(to bottom, color(display-p3 0.10 0.10 0.10), color(display-p3 0.23 0.23 0.23)); }
+  .theme-chip[data-theme="aero"]    { background: linear-gradient(to bottom, color(display-p3 0.05 0.78 0.82), color(display-p3 0.02 0.52 0.60)); }
+  .theme-chip[data-theme="indigo"]  { background: linear-gradient(to bottom, color(display-p3 0.04 0.09 0.20), color(display-p3 0.10 0.22 0.28)); }
+
+  .kit-label {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 10px; color: var(--fg-3);
+    letter-spacing: 0.14em; text-transform: uppercase;
+    text-align: center;
+    margin-bottom: -14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="theme-chip-row" id="themeRow">
+  <div class="theme-chip theme-chip--active" data-theme="classic" title="winampClassic"></div>
+  <div class="theme-chip" data-theme="aero" title="neoAero"></div>
+  <div class="theme-chip" data-theme="indigo" title="indigoTeal"></div>
+</div>
+
+<div class="stage">
+  <div class="kit-label">MANZO · ui kit · main + playlist + eq</div>
+
+  <!-- MAIN WINDOW -->
+  <div class="win main" data-theme="classic">
+    <div class="titlebar">
+      <div class="marks">
+        <div class="dot dot--close"></div>
+        <div class="dot dot--min"></div>
+        <div class="dot dot--max"></div>
+      </div>
+      <span>MANZO</span>
+      <span style="opacity:0.5;">●</span>
+    </div>
+    <div class="body">
+      <div class="lcd-big">2:47</div>
+      <div class="meta">
+        <div class="marquee-wrap">
+          <div class="marquee">★ 03. Bump — Rustie · Glass Swords &nbsp;&nbsp;&nbsp; ★ 03. Bump — Rustie · Glass Swords &nbsp;&nbsp;&nbsp;</div>
+        </div>
+        <div class="specs">320 kbps · 44 khz · stereo · −5:13</div>
+        <div class="seek"><div class="seek__fill"></div><div class="seek__thumb"></div></div>
+      </div>
+      <div class="analyzer" id="analyzer"></div>
+    </div>
+    <div class="transport">
+      <button class="btn" title="prev"><svg width="16" height="14" viewBox="0 0 16 14"><path d="M3 2 L3 12 M5 7 L13 2 L13 12 Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+      <button class="btn" title="play"><svg width="16" height="14" viewBox="0 0 16 14"><path d="M4 2 L13 7 L4 12 Z" fill="currentColor"/></svg></button>
+      <button class="btn" title="pause"><svg width="16" height="14" viewBox="0 0 16 14"><rect x="4" y="3" width="3" height="8" fill="currentColor"/><rect x="9" y="3" width="3" height="8" fill="currentColor"/></svg></button>
+      <button class="btn" title="stop"><svg width="16" height="14" viewBox="0 0 16 14"><rect x="3" y="3" width="10" height="8" fill="currentColor"/></svg></button>
+      <button class="btn" title="next"><svg width="16" height="14" viewBox="0 0 16 14"><path d="M3 2 L11 7 L3 12 Z M13 2 L13 12" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+      <button class="btn" title="eject"><svg width="16" height="14" viewBox="0 0 16 14"><path d="M8 2 L13 9 L3 9 Z" fill="currentColor"/><rect x="3" y="10" width="10" height="2" fill="currentColor"/></svg></button>
+
+      <div class="spacer"></div>
+      <div style="font-size:9px; color:var(--fg-3); text-transform:uppercase; letter-spacing:0.08em;">vol</div>
+      <div class="knob"><div class="knob__fill"></div><div class="knob__thumb"></div></div>
+      <div style="font-size:9px; color:var(--fg-3); text-transform:uppercase; letter-spacing:0.08em; margin-left:6px;">bal</div>
+      <div class="knob" style="width:40px;"><div class="knob__fill" style="left:40%; right:0; width:20%;"></div><div class="knob__thumb" style="left:50%;"></div></div>
+
+      <div class="spacer"></div>
+      <button class="btn btn--on" style="width:auto; padding:0 6px; font-size:8.5px; letter-spacing:0.1em; text-transform:uppercase;">EQ</button>
+      <button class="btn btn--on" style="width:auto; padding:0 6px; font-size:8.5px; letter-spacing:0.1em; text-transform:uppercase;">PL</button>
+    </div>
+    <div class="statusbar">
+      <span>▶ Playing</span>
+      <span><span class="badge badge--on">SHUF</span> <span class="badge">REP</span> <span class="badge">EQ</span></span>
+    </div>
+  </div>
+
+  <div class="stack-sidebyside">
+    <!-- PLAYLIST -->
+    <div class="win playlist" data-theme="classic">
+      <div class="titlebar">
+        <div class="marks"><div class="dot dot--close"></div><div class="dot dot--min"></div><div class="dot dot--max"></div></div>
+        <span>Playlist Editor</span>
+        <span style="opacity:0.5;">350×420</span>
+      </div>
+      <div class="ptoolbar">
+        <span class="ghost">+ add</span>
+        <span class="ghost">− rem</span>
+        <span class="sep"></span>
+        <span class="ghost">sort</span>
+        <span class="ghost">save</span>
+        <span style="margin-left:auto; color:var(--fg-3);">6 tracks · 31:16</span>
+      </div>
+      <div style="padding: 4px 0;">
+        <div class="prow"><span class="idx">01.</span> Gold Panda — I'm With You<span class="time">3:42</span></div>
+        <div class="prow"><span class="idx">02.</span> Bonobo — Black Sands<span class="time">5:11</span></div>
+        <div class="prow prow--active"><span class="idx">03.</span> Bump · Rustie — Glass Swords<span class="time">4:02</span></div>
+        <div class="prow"><span class="idx">04.</span> Four Tet — Pyramid<span class="time">9:27</span></div>
+        <div class="prow prow--missing"><span class="idx">05.</span> Burial — Untrue (missing)<span class="time">−:−−</span></div>
+        <div class="prow"><span class="idx">06.</span> Jamie xx — Gosh<span class="time">4:54</span></div>
+      </div>
+      <div class="statusbar">
+        <span>6 tracks · 1 missing</span>
+        <span>31:16</span>
+      </div>
+    </div>
+
+    <!-- EQUALIZER -->
+    <div class="win eq" data-theme="classic">
+      <div class="titlebar">
+        <div class="marks"><div class="dot dot--close"></div><div class="dot dot--min"></div><div class="dot dot--max"></div></div>
+        <span>Equalizer</span>
+        <span style="opacity:0.5;">10-BAND</span>
+      </div>
+      <div class="body">
+        <!-- Top row: LED buttons · curve graph · PRESETS -->
+        <div class="top-row">
+          <div class="led-btn is-on"><span class="led"></span>On</div>
+          <div class="led-btn"><span class="led"></span>Auto</div>
+          <div class="curve-graph" id="eqCurve">
+            <div class="zero-line"></div>
+            <svg viewBox="0 0 200 44" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2dd35a" stop-opacity="0.55"/>
+                  <stop offset="100%" stop-color="#2dd35a" stop-opacity="0.02"/>
+                </linearGradient>
+              </defs>
+              <path id="eqCurvePath" fill="url(#curveFill)" stroke="none"></path>
+              <path id="eqCurveLine" fill="none" stroke="#f5c927" stroke-width="1.2" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+          <div class="presets-btn">Presets<small>ROCK ▾</small></div>
+        </div>
+
+        <!-- Slider grid -->
+        <div class="slider-grid">
+          <!-- dB scale labels -->
+          <div class="db-scale">
+            <span>+12 db</span>
+            <span>+0 db</span>
+            <span>−12 db</span>
+          </div>
+
+          <!-- Preamp -->
+          <div class="col-band preamp-col">
+            <div class="slider-wrap" data-v="3" id="eqPreamp">
+              <div class="fill fill--boost"></div>
+              <div class="thumb"></div>
+            </div>
+            <div class="preamp-label-below">PRE</div>
+          </div>
+          <div class="preamp-gap"></div>
+
+          <!-- 10 bands — populated by JS -->
+          <div class="col-band"><div class="slider-wrap" data-v="2"  id="b0"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">60</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="4"  id="b1"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">170</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="3"  id="b2"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">310</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="1"  id="b3"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">600</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="-1" id="b4"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">1k</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="-2" id="b5"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">3k</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="0"  id="b6"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">6k</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="2"  id="b7"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">12k</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="3"  id="b8"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">14k</div></div>
+          <div class="col-band"><div class="slider-wrap" data-v="4"  id="b9"><div class="fill"></div><div class="thumb"></div></div><div class="band-label">16k</div></div>
+        </div>
+      </div>
+      <div class="statusbar">
+        <span>preamp +3 db</span>
+        <span>rock</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 10px; color: var(--fg-3); letter-spacing: 0.12em; text-transform: uppercase; text-align: center; margin-top: 8px;">
+    theme switcher · top-right · swaps gradient via CALayer invalidation
+  </div>
+</div>
+
+<script>
+// ─── Spectrum analyzer ───
+const analyzer = document.getElementById('analyzer');
+const COLS = 20;
+const cols = [];
+for (let i = 0; i < COLS; i++) {
+  const col = document.createElement('div');
+  col.className = 'col';
+  const bar = document.createElement('div'); bar.className = 'bar';
+  const peak = document.createElement('div'); peak.className = 'peak';
+  col.append(bar, peak);
+  analyzer.append(col);
+  cols.push({bar, peak, h: 0.3, p: 0.3});
+}
+let t0 = 0;
+function tick(t) {
+  if (!t0) t0 = t;
+  const dt = (t - t0) / 1000; t0 = t;
+  cols.forEach((c, i) => {
+    const target = Math.max(0.05,
+      0.35 + 0.35 * Math.sin(t*0.003 + i*0.4)
+      + 0.25 * Math.sin(t*0.008 + i*0.9)
+      + 0.15 * Math.random()
+    );
+    c.h += (target - c.h) * Math.min(1, dt * 12);
+    c.bar.style.height = (c.h * 100) + '%';
+    if (c.h > c.p) c.p = c.h;
+    else c.p = Math.max(0, c.p - dt * 0.5);
+    c.peak.style.bottom = (c.p * 100) + '%';
+  });
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ─── EQ sliders & curve ───
+const eqBandIds = ['b0','b1','b2','b3','b4','b5','b6','b7','b8','b9'];
+function layoutSlider(wrap) {
+  const v = parseFloat(wrap.dataset.v); // −12…+12
+  const pct = (v + 12) / 24; // 0..1 bottom→top
+  const thumb = wrap.querySelector('.thumb');
+  const fill  = wrap.querySelector('.fill');
+  thumb.style.bottom = `calc(${pct * 100}% - 5.5px)`;
+
+  fill.classList.remove('fill--boost','fill--cut','fill--at-zero');
+  if (Math.abs(v) < 0.01) {
+    fill.classList.add('fill--at-zero');
+    fill.style.top = 'calc(50% - 1px)'; fill.style.bottom = ''; fill.style.height = '2px';
+  } else if (v > 0) {
+    fill.classList.add('fill--boost');
+    fill.style.bottom = '50%'; fill.style.top = `calc(${(1 - pct) * 100}% + 5px)`;
+    fill.style.height = '';
+  } else {
+    fill.classList.add('fill--cut');
+    fill.style.top = '50%'; fill.style.bottom = `calc(${pct * 100}% + 5px)`;
+    fill.style.height = '';
+  }
+}
+function renderEQCurve() {
+  const vals = eqBandIds.map(id => parseFloat(document.getElementById(id).dataset.v));
+  const W = 200, H = 44;
+  const pts = vals.map((v,i) => {
+    const x = (i / (vals.length - 1)) * W;
+    const y = H/2 - (v / 12) * (H/2 - 3);
+    return [x, y];
+  });
+  // Catmull–Rom → cubic bezier
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2[0]} ${p2[1]}`;
+  }
+  document.getElementById('eqCurveLine').setAttribute('d', d);
+  document.getElementById('eqCurvePath').setAttribute('d', d + ` L ${W} ${H} L 0 ${H} Z`);
+}
+document.querySelectorAll('.eq .slider-wrap').forEach(layoutSlider);
+renderEQCurve();
+
+// ─── Theme switcher ───
+const themeRow = document.getElementById('themeRow');
+themeRow.addEventListener('click', (e) => {
+  const chip = e.target.closest('.theme-chip');
+  if (!chip) return;
+  const theme = chip.dataset.theme;
+  themeRow.querySelectorAll('.theme-chip').forEach(c => c.classList.toggle('theme-chip--active', c === chip));
+  document.querySelectorAll('.win').forEach(w => w.dataset.theme = theme);
+});
+</script>
+</body>
+</html>

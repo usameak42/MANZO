@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Specular stack layers</title>
+<link rel="stylesheet" href="_card.css"></head>
+<body>
+<div class="card">
+  <div class="row" style="gap:10px; align-items:stretch;">
+    <div class="col" style="flex:1;">
+      <div style="height:70px; border-radius:8px; background: linear-gradient(to bottom, color(display-p3 0.10 0.10 0.10), color(display-p3 0.23 0.23 0.23));"></div>
+      <div class="swatch-name">1 · base</div>
+      <div class="swatch-label mono">CAGradientLayer</div>
+    </div>
+    <div class="col" style="flex:1;">
+      <div style="height:70px; border-radius:8px; background: linear-gradient(to bottom, color(display-p3 1 1 1 / 0.50), color(display-p3 1 1 1 / 0.08) 45%, transparent); "></div>
+      <div class="swatch-name">2 · specular</div>
+      <div class="swatch-label mono">top 52% band</div>
+    </div>
+    <div class="col" style="flex:1;">
+      <div style="height:70px; border-radius:8px; background: linear-gradient(to top, color(display-p3 1 1 1 / 0.12), transparent);"></div>
+      <div class="swatch-name">3 · lower glow</div>
+      <div class="swatch-label mono">bottom 25%</div>
+    </div>
+    <div class="col" style="flex:1;">
+      <div style="height:70px; border-radius:8px; box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.45); background: color(display-p3 0.22 0.22 0.22);"></div>
+      <div class="swatch-name">4 · rim</div>
+      <div class="swatch-label mono">1pt inset, α 0.45</div>
+    </div>
+    <div class="col" style="flex:1;">
+      <div class="neo" style="height:70px; border-radius:8px;"></div>
+      <div class="swatch-name">= composed</div>
+      <div class="swatch-label mono">NeoAeroContainer</div>
+    </div>
+  </div>
+  <div class="tag">NeoAeroLayerFactory.make() — container + 4 sublayers, rasterized @ 2×</div>
+</div>
+</body></html>

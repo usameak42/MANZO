@@ -18,7 +18,8 @@
 - [ ] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
 - [ ] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
 - [x] **Phase 8.1: Transport Controls and LCD Display** — Winamp-style LCD, transport buttons, seek bar, volume/pan sliders (INSERTED)
-- [ ] **Phase 9: Online Streaming** — yt-dlp sidecar bundle, URL streaming, quarantine strip
+- [ ] **Phase 9: Complete UI Rewrite** — pixel-accurate implementation of MANZO design system from HTML spec
+- [ ] **Phase 10: Online Streaming** — yt-dlp sidecar bundle, URL streaming, quarantine strip
 
 ---
 
@@ -224,7 +225,26 @@ Plans:
 
 ---
 
-### Phase 9: Online Streaming
+### Phase 9: Complete UI Rewrite
+
+**Goal:** The main window, playlist window, and EQ window are pixel-accurately rebuilt to match the MANZO design system HTML spec — correct dimensions (275×116pt main window), VT323 LCD with green glow, teal→green seek/slider fills, Winamp-style transport row, dark playlist, and 10-band EQ with curve graph.
+**Depends on:** Phase 8.1
+**Requirements:** CTRL-01, CTRL-02, CTRL-03, CTRL-04
+**UI hint:** yes
+
+**Reference:** `/Users/usameak42/Coding/MANZO/manzo-design-system/project/manzo_ui_kit.html`
+
+**Success criteria:**
+1. Main window is exactly 275×116pt; titlebar shows traffic light dots + centered "MANZO" text; status bar shows "▶ PLAYING" left and "SHUF · REP · EQ" badges right.
+2. LCD area renders VT323 timer with P3 green glow, scrolling marquee track title, kbps/kHz/STEREO specs, and spectrum analyzer in the top-right corner.
+3. Seek bar has teal→green gradient fill and white thumb; transport buttons match the glass-pill aesthetic from the HTML spec; VOL and BAL sliders use the same gradient fill.
+4. Playlist window has a dark background (not white/aqua) with blue-highlight active row; EQ window renders LED ON/OFF buttons, EQ curve graph, preamp + 10 band sliders (31Hz–16kHz), dB scale, and PRESETS button.
+
+**Plans:** TBD
+
+---
+
+### Phase 10: Online Streaming
 
 **Goal:** Users can paste a URL and stream audio via a bundled yt-dlp sidecar piped into the Rust audio pipeline, with the quarantine attribute stripped automatically on first launch.
 **Depends on:** Phase 2, Phase 8
@@ -254,7 +274,8 @@ Plans:
 | 7. Spectrum Analyzer | 0/? | Not started | - |
 | 8. Playlist & Library | 0/? | Not started | - |
 | 8.1. Transport Controls and LCD Display | 3/3 | Complete | 2026-04-24 |
-| 9. Online Streaming | 0/? | Not started | - |
+| 9. Complete UI Rewrite | 0/? | Not started | - |
+| 10. Online Streaming | 0/? | Not started | - |
 
 ---
 
@@ -295,9 +316,9 @@ Plans:
 | CTRL-02 | Phase 8.1 |
 | CTRL-03 | Phase 8.1 |
 | CTRL-04 | Phase 8.1 |
-| NET-01 | Phase 9 |
-| NET-02 | Phase 9 |
-| NET-03 | Phase 9 |
+| NET-01 | Phase 10 |
+| NET-02 | Phase 10 |
+| NET-03 | Phase 10 |
 
 **Mapped: 36/36**
 

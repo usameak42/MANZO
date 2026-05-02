@@ -1,0 +1,99 @@
+/* Shared card chrome for Design System preview cards. */
+@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  background: #1a1a24;
+  color: #e3e5ec;
+  font-size: 12px;
+  line-height: 1.35;
+  /* Dot-grid reference bg to help evaluate transparency / rim precision */
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(135deg, #232334 0%, #14141d 100%);
+  background-size: 14px 14px, cover;
+  padding: 20px;
+}
+
+.card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row  { display: flex; align-items: center; gap: 12px; }
+.col  { display: flex; flex-direction: column; gap: 8px; }
+.grow { flex: 1 1 auto; }
+
+.swatch {
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 1px 2px rgba(0,0,0,0.4);
+  flex: 0 0 auto;
+}
+.swatch--tall { height: 68px; }
+.swatch-label { font-size: 10px; color: #8e92a0; font-family: ui-monospace, "SF Mono", monospace; text-transform: lowercase; white-space: nowrap; }
+.swatch-name  { font-size: 12px; color: #e3e5ec; font-weight: 500; }
+
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.dim  { color: #8e92a0; }
+.tag  { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b6f7c; }
+
+/* Fake the Neo-Aero stack in CSS so the foundations preview uses ≈ the real look. */
+.neo {
+  position: relative;
+  background:
+    linear-gradient(to top, color(display-p3 1 1 1 / 0.12) 0%, color(display-p3 1 1 1 / 0) 25%),
+    linear-gradient(to bottom, color(display-p3 1 1 1 / 0.50) 0%, color(display-p3 1 1 1 / 0.08) 23%, color(display-p3 1 1 1 / 0) 52%),
+    linear-gradient(to bottom, color(display-p3 0.10 0.10 0.10), color(display-p3 0.23 0.23 0.23));
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px color(display-p3 1 1 1 / 0.45), 0 8px 24px rgba(0,0,0,0.5);
+  color: #c7ccd9;
+}
+.neo--aero {
+  background:
+    linear-gradient(to top, color(display-p3 1 1 1 / 0.12) 0%, color(display-p3 1 1 1 / 0) 25%),
+    linear-gradient(to bottom, color(display-p3 1 1 1 / 0.50) 0%, color(display-p3 1 1 1 / 0.08) 23%, color(display-p3 1 1 1 / 0) 52%),
+    linear-gradient(to bottom, color(display-p3 0.05 0.78 0.82), color(display-p3 0.02 0.52 0.60));
+}
+.neo--indigo {
+  background:
+    linear-gradient(to top, color(display-p3 1 1 1 / 0.12) 0%, color(display-p3 1 1 1 / 0) 25%),
+    linear-gradient(to bottom, color(display-p3 0.74 0.87 0.90 / 0.50) 0%, color(display-p3 0.74 0.87 0.90 / 0.08) 23%, color(display-p3 0.74 0.87 0.90 / 0) 52%),
+    linear-gradient(to bottom, color(display-p3 0.04 0.09 0.20), color(display-p3 0.10 0.22 0.28));
+}
+
+.lcd {
+  font-family: "VT323", ui-monospace, monospace;
+  color: color(display-p3 0.13 0.85 0.47);
+  text-shadow: 0 0 8px color(display-p3 0.13 0.85 0.47 / 0.35), 0 0 2px color(display-p3 0.13 0.85 0.47 / 0.70);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Spec bar visual */
+.spec-bar {
+  width: 3px;
+  background: linear-gradient(to top,
+    color(display-p3 0.13 0.85 0.47) 0%,
+    color(display-p3 0.98 0.92 0.16) 70%,
+    color(display-p3 1 0.35 0.20) 100%);
+}
+
+/* Peak dot */
+.peak { width: 3px; height: 2px; background: #fff; }
+
+/* Marquee pixel text */
+.pixel {
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  color: #c7ccd9;
+  white-space: nowrap;
+}

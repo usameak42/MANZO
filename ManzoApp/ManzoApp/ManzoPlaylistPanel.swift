@@ -6,7 +6,7 @@ import AppKit
 // All inner panels (titleView, bodyView, toolbarView) are plain NSView with wantsLayer=true.
 // NeoAero chrome applied via NeoAeroLayerFactory in bodyFocus mode (D-05).
 
-private let kPanelWidth:       CGFloat = 350   // Winamp config_pe_width — widened per UAT feedback
+private let kPanelWidth:       CGFloat = 480   // match main window width
 private let kPanelInitHeight:  CGFloat = 116   // Winamp config_pe_height (CONTEXT.md D-01)
 private let kPanelMinHeight:   CGFloat = 60    // UI-SPEC: minimum usable height
 private let kPLTitleBarHeight: CGFloat = 16    // UI-SPEC: titleView height (16pt strip)
@@ -74,7 +74,6 @@ final class ManzoPlaylistPanel: NSPanel {
         setupTableView()
         setupEmptyState()
         setupToolbar()
-        applyNeoAeroChrome()
 
         // Initial state: show empty state (no tracks yet — AppDelegate wires data in 08-03).
         setEmptyStateVisible(true)
@@ -95,6 +94,9 @@ final class ManzoPlaylistPanel: NSPanel {
         root.wantsLayer   = true
         root.layer?.cornerRadius = 10
         root.layer?.masksToBounds = true
+        root.layer?.backgroundColor = NSColor(
+            displayP3Red: 0.231, green: 0.231, blue: 0.231, alpha: 1.0
+        ).cgColor
         contentView = root
 
         for panel in [titleView, bodyView, toolbarView] {
@@ -294,39 +296,6 @@ final class ManzoPlaylistPanel: NSPanel {
         ])
 
         NSLog("MANZO Phase 8: ManzoPlaylistPanel.setupToolbar — [+]/[\u{2212}] buttons wired")
-    }
-
-    // MARK: - NeoAero Chrome (D-05, bodyFocus style)
-
-    func applyNeoAeroChrome() {
-        let style = ManzoVisualStyle.load()
-
-        // Remove old layers first (applyStyle pattern from ManzoRootView).
-        removeNeoAeroLayers(from: bodyView.layer)
-        removeNeoAeroLayers(from: titleView.layer)
-        removeNeoAeroLayers(from: toolbarView.layer)
-
-        // bodyFocus: full 5-layer chrome on bodyView; simplified base+rim on title/toolbar (D-05).
-        // Bounds may be zero at init time — layers resize correctly on first layout via
-        // NeoAeroLayerFactory setting frame = bounds. Correct frames applied on layout pass.
-        let bodyLayer   = NeoAeroLayerFactory.make(style: style, bounds: bodyView.bounds)
-        let titleSimple = NeoAeroLayerFactory.makeSimplified(style: style, bounds: titleView.bounds)
-        let toolSimple  = NeoAeroLayerFactory.makeSimplified(style: style, bounds: toolbarView.bounds)
-
-        bodyView.layer?.insertSublayer(bodyLayer,    at: 0)
-        titleView.layer?.insertSublayer(titleSimple, at: 0)
-        toolbarView.layer?.insertSublayer(toolSimple, at: 0)
-
-        NSLog("MANZO Phase 8: ManzoPlaylistPanel.applyNeoAeroChrome — bodyFocus layers applied, theme=%@",
-              style.colorTheme.rawValue)
-    }
-
-    private func removeNeoAeroLayers(from layer: CALayer?) {
-        guard let layer = layer else { return }
-        let toRemove = layer.sublayers?.filter {
-            ($0.value(forKey: "name") as? String) == "NeoAeroContainer"
-        } ?? []
-        toRemove.forEach { $0.removeFromSuperlayer() }
     }
 
     // MARK: - UI Updates

@@ -86,6 +86,7 @@ import AppKit
         win.center()
         win.makeKeyAndOrderFront(nil)
         win.setFrameAutosaveName("ManzoMainWindow")
+        win.setContentSize(NSSize(width: 480, height: 116))
         manzoWindow = win
         eqPanel = ManzoEQPanel()
         eqPanel?.onBandChanged = { [weak self] gains, preamp in
