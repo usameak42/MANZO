@@ -42,7 +42,7 @@ open ManzoApp/ManzoApp.xcodeproj
 
 3. Build and run with `Cmd+R`. Xcode's pre-build script automatically runs `cargo build --release --target aarch64-apple-darwin` and regenerates `manzo_core.h` via `cbindgen` before linking.
 
-4. Verify the build: the app logs `MANZO Phase 1: FFI smoke test passed` on launch, confirming the Rust staticlib linked correctly.
+4. Verify the build: a successful launch logs `MANZO Phase 8: PlaylistManager loaded — 0 tracks` and `MANZO Phase 9: ManzoMainWindow ordered front — 275×116pt` to the system log, confirming the Rust staticlib linked correctly and the main window is active.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ Key architectural constraints (validated by spike experiments):
 
 ## Development Status
 
-The v1.0 roadmap spans 10 phases. Phases 1–8 (audio pipeline, DSP, full UI shell, spectrum analyzer, and playlist) are complete. Phase 9 (Complete UI Rewrite) is currently in progress, implementing a pixel-accurate reimplementation against the MANZO design system spec.
+The v1.0 roadmap spans 11 phases. Phases 1–7 (audio pipeline, DSP, full UI shell, and spectrum analyzer) are complete. Phase 8 (Playlist & Library) is in progress — 4 of 5 plans executed, UAT checkpoint pending. Phase 9 (Complete UI Rewrite) is currently in progress, implementing a pixel-accurate reimplementation against the MANZO design system spec.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -93,7 +93,7 @@ The v1.0 roadmap spans 10 phases. Phases 1–8 (audio pipeline, DSP, full UI she
 | 5 | UI Shell — Frameless NSWindow, single-root vibrancy, drag region | Complete |
 | 6 | Neo-Aero Visual Stack — 5-layer CALayer specular stack, P3 color | Complete |
 | 7 | Spectrum Analyzer — MTKView FFT, SDF bloom, CADisplayLink | Complete |
-| 8 | Playlist & Library — File picker, drag-reorder, persistence | Complete |
+| 8 | Playlist & Library — File picker, drag-reorder, persistence | In Progress (4/5 plans) |
 | 8.1 | Transport Controls and LCD Display | Superseded — Claude Design handoff pending |
 | 9 | Complete UI Rewrite — pixel-accurate reimplementation against design system | In Progress |
 | 10 | Online Streaming — yt-dlp sidecar, URL streaming | Not Started |

@@ -51,7 +51,7 @@ MANZO is a Winamp-inspired macOS music player built with a strict process bounda
 
 1. Swift calls `manzo_open(path)` → Rust allocates a `ManzoHandle` and opens the file via the mpg123 feed API (`mpg123_open_feed`).
 2. Swift calls `manzo_play(handle)` → Rust starts an independent audio thread. The thread feeds 4096-byte chunks to mpg123 (`mpg123_feed`), reads float32 PCM (`mpg123_read` with `MPG123_FORCE_FLOAT`), and trims exactly 529 samples of decoder priming delay for gapless playback.
-3. PCM samples flow float32 end-to-end — no int16 intermediate conversion — through the 10-band dual-biquad IIR EQ, then into a cpal CoreAudio output callback. `AVAudioMixerNode` handles volume and pan.
+3. PCM samples flow float32 end-to-end — no int16 intermediate conversion — through the 10-band dual-biquad IIR EQ, then into a cpal CoreAudio output callback. Volume and pan are applied as Rust linear ramps inside the audio callback, interpolating per-frame toward target values set by `manzo_set_volume` and `manzo_set_pan`.
 4. Swift calls `manzo_set_eq(handle, gains, preamp)`, `manzo_set_volume`, and `manzo_set_pan` in response to UI control events. These are applied within the next audio buffer period.
 5. Swift polls `manzo_get_position(handle)` on a 100 ms timer to update the seek bar display. `manzo_get_state(handle)` is polled at the same interval to detect natural EOF (state 4 = ENDED) and auto-advance the playlist. `manzo_get_duration(handle)` is read at open time to set the seek bar range.
 
@@ -159,8 +159,8 @@ The build chain is driven entirely by Xcode:
    - `cargo build --release --target aarch64-apple-darwin`
    - `cbindgen --config cbindgen.toml --output manzo_core.h`
    - Output declared: `libmanzo_core.a` at `manzo-core/target/aarch64-apple-darwin/release/`
-2. **Xcode linker** links `libmanzo_core.a` via `OTHER_LDFLAGS = -lmanzo_core` and `LIBRARY_SEARCH_PATHS` pointing to the Cargo release output directory.
-3. **Swift bridging header** at `ManzoApp/ManzoApp-Bridging-Header.h` includes `manzo_core.h` — making all 13 functions callable from Swift with no `@_silgen_name` decoration.
+2. **Xcode linker** links `libmanzo_core.a` via `OTHER_LDFLAGS = -lmanzo_core -lmpg123` and `LIBRARY_SEARCH_PATHS` pointing to the Cargo release output directory.
+3. **Swift bridging header** at `ManzoApp/ManzoApp/ManzoApp-Bridging-Header.h` includes `manzo_core.h` — making all 13 functions callable from Swift with no `@_silgen_name` decoration.
 
 Build configuration: `ARCHS = arm64`, `VALID_ARCHS = arm64`, `MACOSX_DEPLOYMENT_TARGET = 15.0`, `SWIFT_VERSION = 5.10`.
 

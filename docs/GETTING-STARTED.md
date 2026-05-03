@@ -76,7 +76,7 @@ Press `Cmd+R` to build and run. Xcode's pre-build script automatically:
 
 1. Runs `cargo build --release --target aarch64-apple-darwin` inside `manzo-core/`
 2. Re-generates `manzo-core/manzo_core.h` via `cbindgen`
-3. Links `libmanzo_core.a` into the Swift app via the bridging header
+3. Copies `libmpg123.dylib` to the release output directory; Xcode then links `libmanzo_core.a` and `libmpg123` via `LIBRARY_SEARCH_PATHS` (pointing to `manzo-core/target/aarch64-apple-darwin/release/`) and the `-lmanzo_core -lmpg123` flags in `project.yml` — the bridging header (`ManzoApp-Bridging-Header.h`) separately `#include`s `manzo_core.h` to expose the C FFI declarations to Swift
 
 ### Verify the build succeeded
 

@@ -56,8 +56,8 @@ The header is regenerated automatically by the Xcode pre-build script after each
 | `VALID_ARCHS` | `arm64` | Enforces single-arch throughout |
 | `LIBRARY_SEARCH_PATHS` | `$(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release` | Where Xcode finds `libmanzo_core.a` |
 | `HEADER_SEARCH_PATHS` | `$(SRCROOT)/../manzo-core` | Where the bridging header finds `manzo_core.h` |
-| `OTHER_LDFLAGS` | `-lmanzo_core` | Links the Rust static library |
-| `SWIFT_OBJC_BRIDGING_HEADER` | `ManzoApp/ManzoApp/ManzoApp-Bridging-Header.h` | Exposes the C FFI to Swift |
+| `OTHER_LDFLAGS` | `-lmanzo_core -lmpg123` | Links the Rust static library and the mpg123 dylib |
+| `SWIFT_OBJC_BRIDGING_HEADER` | `ManzoApp/ManzoApp-Bridging-Header.h` | Exposes the C FFI to Swift (build setting value; file physically at `ManzoApp/ManzoApp/ManzoApp-Bridging-Header.h`) |
 
 The `.xcodeproj` is generated from `ManzoApp/project.yml` via XcodeGen. Edit `project.yml` to change build settings — do not modify `project.pbxproj` directly.
 
@@ -141,8 +141,10 @@ let aeroAqua = CGColor(colorSpace: p3, components: [0.0, 0.84, 0.90, 1.0])!
 
 | Name | P3 Components (R, G, B, A) | Usage |
 |------|---------------------------|-------|
-| Aqua-teal top | `(0.05, 0.78, 0.82, 1.0)` | Panel base gradient top |
-| Deeper teal bottom | `(0.02, 0.52, 0.60, 1.0)` | Panel base gradient bottom |
+| Base top | `(0.10, 0.10, 0.10, 1.0)` | Panel base gradient top (dark gray) |
+| Base bottom | `(0.23, 0.23, 0.23, 1.0)` | Panel base gradient bottom (dark gray) |
+| Teal start | `(0.05, 0.78, 0.82, 1.0)` | Seek bar fill gradient start; VOL/BAL slider fill start |
+| Green end | `(0.13, 0.85, 0.47, 1.0)` | Seek bar fill gradient end; VOL/BAL slider fill end |
 | Aero aqua | `(0.0, 0.84, 0.90, 1.0)` | Accent / spectrum mid |
 | Deep teal (spectrum) | `(0.02, 0.55, 0.65, 1.0)` | Spectrum bar bottom |
 | Bright aqua (spectrum) | `(0.0, 0.88, 0.95, 1.0)` | Spectrum bar mid — outside sRGB gamut |
@@ -152,7 +154,7 @@ let aeroAqua = CGColor(colorSpace: p3, components: [0.0, 0.84, 0.90, 1.0])!
 
 | Layer | Type | Key Values |
 |-------|------|-----------|
-| Base gradient | `CAGradientLayer` | Aqua-teal top → deeper teal bottom |
+| Base gradient | `CAGradientLayer` | Base top → base bottom (dark gray) |
 | Specular band | `CAGradientLayer` | Top 52% of height; white alpha 0.50 → 0.08 → 0.0 |
 | Lower glow | `CAGradientLayer` | Bottom 25% of height; white alpha 0.0 → 0.12 |
 | Rim highlight | `CALayer` | 1 px border, white alpha 0.45, inset 0.5 px |
@@ -174,12 +176,11 @@ Performance: `shouldRasterize = true`, `rasterizationScale = 2.0` on all static 
 
 | Setting | Value | Reason |
 |---------|-------|--------|
-| `styleMask` | `[.borderless, .resizable]` | Frameless Winamp-style window |
-| `isOpaque` | `false` | Required for Liquid Glass / vibrancy |
-| `backgroundColor` | `.clear` | Required for Liquid Glass / vibrancy |
-| `collectionBehavior` | `[.canJoinAllSpaces, .stationary]` | Opts out of Stage Manager grouping |
-| Root vibrancy | `.behindWindow` (`NSVisualEffectView`) | Exactly one per window; no nesting |
-| `layer.cornerRadius` | `16` | Rounded window chrome |
+| `styleMask` | `[.borderless, .resizable, .miniaturizable]` | Frameless Winamp-style window with miniaturize support |
+| `isOpaque` | `false` | Required for transparent rounded window |
+| `backgroundColor` | `.clear` | Required for transparent rounded window |
+| Root layer | `CALayer` via `wantsLayer = true` on `ManzoMainWindowView` | Pure CALayer window — no `NSVisualEffectView`; background drawn in `draw(_:)` using a P3 dark-gray gradient |
+| `layer.cornerRadius` | `10` (`ManzoMetrics.cornerRadius`) | Rounded window chrome |
 
 ---
 
