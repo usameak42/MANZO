@@ -53,7 +53,7 @@ MANZO is split into two top-level components:
 | `manzo-core/` | Rust | Audio decode (mpg123), DSP (EQ, volume, pan), FFT for spectrum |
 | `ManzoApp/` | Swift/AppKit | UI shell, Metal renderer, playlist, FFI calls into manzo-core |
 
-The Rust crate compiles to a static library (`libmanzo_core.a`) linked into the Swift app via a cbindgen-generated C header (`manzo_core.h`). The FFI surface is exactly 11 functions:
+The Rust crate compiles to a static library (`libmanzo_core.a`) linked into the Swift app via a cbindgen-generated C header (`manzo_core.h`). The FFI surface exposes 13 functions:
 
 ```c
 manzo_ManzoHandle *manzo_open(const char *path);
@@ -66,6 +66,8 @@ void               manzo_set_eq(manzo_ManzoHandle *handle, const float *gains, f
 void               manzo_set_volume(manzo_ManzoHandle *handle, float volume);
 void               manzo_set_pan(manzo_ManzoHandle *handle, float pan);
 uint64_t           manzo_get_position(manzo_ManzoHandle *handle);
+int32_t            manzo_get_state(manzo_ManzoHandle *handle);
+uint64_t           manzo_get_duration(manzo_ManzoHandle *handle);
 uintptr_t          manzo_get_spectrum(manzo_ManzoHandle *handle, float *out_buf, uintptr_t count);
 ```
 
@@ -80,19 +82,21 @@ Key architectural constraints (validated by spike experiments):
 
 ## Development Status
 
-Phase 1 (Build Foundation) is complete. The full v1.0 roadmap spans 9 phases and 32 requirements:
+The v1.0 roadmap spans 10 phases. Phases 1–8 (audio pipeline, DSP, full UI shell, spectrum analyzer, and playlist) are complete. Phase 9 (Complete UI Rewrite) is currently in progress, implementing a pixel-accurate reimplementation against the MANZO design system spec.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Build Foundation — Cargo+Xcode dual build chain with cbindgen FFI | Complete |
-| 2 | Audio Pipeline — MP3 decode via mpg123-sys + cpal/CoreAudio float32 | Not started |
-| 3 | Playback Controls — Gapless playback, transport, auto-advance | Not started |
-| 4 | DSP Engine — 10-band EQ (eq10dsp.cpp port), volume, pan | Not started |
-| 5 | UI Shell — Frameless NSWindow, single-root vibrancy, drag region | Not started |
-| 6 | Neo-Aero Visual Stack — 5-layer CALayer specular stack, P3 color | Not started |
-| 7 | Spectrum Analyzer — MTKView FFT, SDF bloom, CADisplayLink | Not started |
-| 8 | Playlist & Library — File picker, drag-reorder, persistence | Not started |
-| 9 | Online Streaming — yt-dlp sidecar, URL streaming | Not started |
+| 2 | Audio Pipeline — MP3 decode via mpg123-sys + cpal/CoreAudio float32 | Complete |
+| 3 | Playback Controls — Gapless playback, transport, auto-advance | Complete |
+| 4 | DSP Engine — 10-band EQ (eq10dsp.cpp port), volume, pan | Complete |
+| 5 | UI Shell — Frameless NSWindow, single-root vibrancy, drag region | Complete |
+| 6 | Neo-Aero Visual Stack — 5-layer CALayer specular stack, P3 color | Complete |
+| 7 | Spectrum Analyzer — MTKView FFT, SDF bloom, CADisplayLink | Complete |
+| 8 | Playlist & Library — File picker, drag-reorder, persistence | Complete |
+| 8.1 | Transport Controls and LCD Display | Superseded — Claude Design handoff pending |
+| 9 | Complete UI Rewrite — pixel-accurate reimplementation against design system | In Progress |
+| 10 | Online Streaming — yt-dlp sidecar, URL streaming | Not Started |
 
 ## Testing
 
@@ -103,7 +107,7 @@ cd manzo-core
 cargo test
 ```
 
-The tests verify FFI stub contracts (return values, absence of crashes) and must pass before any Phase 2+ work modifies the FFI surface.
+The tests verify FFI contracts (null-safety, return values, state sentinel behavior) for all 13 exposed functions and must pass before any changes to the FFI surface.
 
 ## License
 

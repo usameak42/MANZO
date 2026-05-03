@@ -22,7 +22,7 @@ MANZO targets Apple Silicon and macOS Sequoia exclusively. Ensure the following 
 | Rust toolchain | stable | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | `aarch64-apple-darwin` target | — | `rustup target add aarch64-apple-darwin` |
 | `cbindgen` | — | `cargo install cbindgen` |
-| XcodeGen | 2.x | `brew install xcodegen` |
+| XcodeGen | 2.x | `brew install xcodegen` (optional — see step 4) |
 
 > Xcode Command Line Tools alone are **not** sufficient — the full Xcode.app (16.0+) is required for Swift 5.10 and the Metal shader compiler.
 
@@ -51,16 +51,16 @@ cbindgen generates the C header (`manzo_core.h`) from the Rust FFI surface. The 
 cargo install cbindgen
 ```
 
-### 4. Generate the Xcode project
+### 4. Generate the Xcode project (optional)
 
-The Xcode project file is not committed to the repository. It is generated from `ManzoApp/project.yml` using XcodeGen.
+`ManzoApp/ManzoApp.xcodeproj` is committed to the repository, so this step is only needed if you want to regenerate it from `ManzoApp/project.yml` (e.g., after adding new source files).
 
 ```bash
 cd ManzoApp
 xcodegen generate
 ```
 
-This writes `ManzoApp/ManzoApp.xcodeproj`.
+This overwrites `ManzoApp/ManzoApp.xcodeproj` in place.
 
 ---
 
@@ -80,13 +80,14 @@ Press `Cmd+R` to build and run. Xcode's pre-build script automatically:
 
 ### Verify the build succeeded
 
-On launch, the app writes the following line to the Xcode console:
+On launch, the app writes the following lines to the Xcode console (exact track count may vary):
 
 ```
-MANZO Phase 1: FFI smoke test passed — manzo_play returned 0
+MANZO Phase 8: PlaylistManager loaded — 0 tracks
+MANZO Phase 9: ManzoMainWindow ordered front — 275×116pt
 ```
 
-This confirms the Rust staticlib linked correctly and the 11-function FFI surface is reachable from Swift.
+This confirms the Rust staticlib linked correctly, the FFI surface is reachable from Swift, and the main window has been created.
 
 ### Run Rust unit tests independently
 
@@ -97,7 +98,7 @@ cd manzo-core
 cargo test
 ```
 
-These tests verify FFI stub contracts (return values, absence of crashes) and must pass before any Phase 2+ work modifies the FFI surface.
+These tests verify FFI stub contracts (return values, absence of crashes) and must pass before any changes modify the FFI surface.
 
 ---
 
@@ -128,13 +129,12 @@ rustup target add aarch64-apple-darwin
 
 ### `xcodegen: command not found`
 
-XcodeGen is required to produce the `.xcodeproj` before opening Xcode. Fix:
+XcodeGen is only required if you need to regenerate the `.xcodeproj`. Since the project file is committed, you can skip this step entirely on a fresh clone. If you do need to regenerate:
 
 ```bash
 brew install xcodegen
+xcodegen generate   # run from ManzoApp/
 ```
-
-Then re-run `xcodegen generate` from the `ManzoApp/` directory.
 
 ### Build fails — wrong architecture (x86_64 output)
 
@@ -146,4 +146,4 @@ MANZO is arm64-only. If Xcode attempts to build for x86_64 (e.g., because Rosett
 
 - **Architecture overview** — how `manzo-core` (Rust) and `ManzoApp` (Swift) are structured, the FFI surface, and key constraints: `docs/ARCHITECTURE.md`
 - **Configuration reference** — Cargo build flags, cbindgen settings, and Xcode build settings: `docs/CONFIGURATION.md`
-- **Development workflow** — adding features, running tests, code style: see `docs/DEVELOPMENT.md` (coming soon)
+- **Development workflow** — adding features, running tests, code style: `docs/DEVELOPMENT.md`

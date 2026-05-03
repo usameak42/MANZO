@@ -1,7 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 # Configuration
 
-MANZO has no runtime configuration files or environment variables — it is a macOS desktop application that ships as a self-contained `.app` bundle. All configurable values are compiled constants, Xcode build settings, Cargo build flags, and (at runtime) UserDefaults keys persisted by the app itself.
+MANZO has no runtime configuration files or environment variables — it is a macOS desktop application that ships as a self-contained `.app` bundle. All configurable values are compiled constants, Xcode build settings, Cargo build flags, and (at runtime) persisted state written by the app itself.
 
 ---
 
@@ -11,9 +11,18 @@ MANZO has no runtime configuration files or environment variables — it is a ma
 
 | Setting | Value | Description |
 |---------|-------|-------------|
-| `[lib] crate-type` | `["staticlib"]` | Compiles to `libmanzo_core.a` for static linkage |
+| `[lib] crate-type` | `["staticlib", "rlib"]` | Compiles to `libmanzo_core.a` for static linkage; `rlib` enables `cargo test` |
 | `[profile.release] opt-level` | `3` | Maximum compiler optimization |
 | `[profile.release] lto` | `true` | Link-time optimization — reduces binary size and enables cross-crate inlining |
+
+**Dependencies:**
+
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| `mpg123-sys` | `0.1` | MP3 decode via libmpg123 FFI |
+| `cpal` | `0.15` | Cross-platform audio output (CoreAudio on macOS) |
+| `libc` | `0.2` | C types for FFI boundary |
+| `rustfft` | `6` | 1024-point FFT for the spectrum analyzer pipeline |
 
 Debug builds (the default for `cargo build` without `--release`) omit the `lto` and `opt-level` overrides. The Xcode pre-build script always passes `--release`:
 
@@ -69,7 +78,7 @@ Declared in `ManzoApp/ManzoApp/Info.plist` and mirrored in `project.yml`:
 
 ## FFI Surface Configuration
 
-The Rust core exposes exactly 11 C-callable functions via the generated header. These are fixed-contract values — changing them requires updating both `manzo-core/src/lib.rs` (Rust side) and the Swift call sites:
+The Rust core exposes 13 C-callable functions via the generated header. These are fixed-contract values — changing them requires updating both `manzo-core/src/lib.rs` (Rust side) and the Swift call sites:
 
 | Function | Signature | Notes |
 |----------|-----------|-------|
@@ -83,6 +92,8 @@ The Rust core exposes exactly 11 C-callable functions via the generated header. 
 | `manzo_set_volume` | `(ManzoHandle*, float)` | Range [0.0, 1.0] |
 | `manzo_set_pan` | `(ManzoHandle*, float)` | Range [−1.0, 1.0]; 0.0 = center |
 | `manzo_get_position` | `(ManzoHandle*) → u64` | Returns milliseconds |
+| `manzo_get_state` | `(ManzoHandle*) → i32` | 1=PLAYING, 2=PAUSED, 3=STOPPED, 4=ENDED; returns 3 on null |
+| `manzo_get_duration` | `(ManzoHandle*) → u64` | Total track duration in milliseconds; 0 if unknown |
 | `manzo_get_spectrum` | `(ManzoHandle*, float*, usize) → usize` | `count` float32 FFT magnitudes [0.0, 1.0] |
 
 ---
@@ -94,12 +105,18 @@ These values are encoded in the Rust implementation and must not be changed with
 | Constant | Value | Source |
 |----------|-------|--------|
 | MP3 gapless trim | 529 samples | mpg123 decoder priming delay (MPEG Layer 3 spec) |
-| EQ bands (Winamp mode) | 70, 180, 320, 600, 1000, 3000, 6000, 12000, 14000, 16000 Hz | From `eq10dsp.cpp` |
-| EQ Q factor | 1.41 | From `eq10dsp.cpp` |
+| EQ bands (Winamp mode) | 70, 180, 320, 600, 1000, 3000, 6000, 12000, 14000, 16000 Hz | `FREQS` array in `manzo-core/src/eq10.rs` |
+| EQ Q factor | 1.41 (`EQ10_Q`) | `manzo-core/src/eq10.rs` |
 | EQ gain range | ±12.0 dB per band | Winamp preset format constraint |
-| EQ output limiter | −0.6 dB (`TRIM_CODE = 0.930`) | Prevents clipping on full boost |
+| EQ output limiter threshold | 0.930 (`EQ10_TRIM_CODE`) | `manzo-core/src/eq10.rs` — prevents clipping on full boost |
+| EQ limiter release | 0.700 seconds (`EQ10_TRIM_RELEASE`) | `manzo-core/src/eq10.rs` — controls `detectdecay` per channel |
+| Denormal fix | `1e-30` (`DENORMAL_FIX`) | Added to biquad `y0` and limiter `detect` per sample to prevent CPU stall |
 | EQ preset byte mapping | `v=31 → 0 dB`; `v>31` boost; `v<31` cut | `.eqf` file format (unsigned char 0–63) |
 | Audio sample format | Float32 end-to-end | No int16 conversion in pipeline |
+| FFT window size | 1024 samples | `rustfft` 1024-point forward FFT |
+| FFT stride | 512 samples | FFT fires every 512 new mono-downmixed samples |
+| Spectrum bars | 75 | Each bar averages 4 consecutive FFT bins |
+| Volume/pan ramp length | 441 frames (~10 ms at 44.1 kHz) | Linear ramp to prevent clicks on slider changes |
 
 ---
 
@@ -166,11 +183,29 @@ Performance: `shouldRasterize = true`, `rasterizationScale = 2.0` on all static 
 
 ---
 
-## Runtime Persistence (UserDefaults)
+## Runtime Persistence
 
-Window position and size are persisted between launches via `UserDefaults` (requirement SHELL-05). No key names are documented yet — they will be defined when the UI shell is implemented in Phase 5.
+### Window Frame (AppKit UserDefaults)
 
-<!-- VERIFY: Final UserDefaults key names for window position and size persistence -->
+Window and panel positions are persisted automatically by AppKit via `setFrameAutosaveName`. The keys are written to `UserDefaults` by the AppKit framework under the hood — no explicit `UserDefaults.standard.set(...)` calls are needed.
+
+| Autosave name | Window | UserDefaults key (AppKit internal) |
+|---------------|--------|-------------------------------------|
+| `ManzoMainWindow` | Main player window | `NSWindow Frame ManzoMainWindow` |
+| `ManzoPlaylistPanel` | Playlist panel | `NSWindow Frame ManzoPlaylistPanel` |
+
+These keys are written to `~/Library/Preferences/com.manzo.ManzoApp.plist` by AppKit and restored on next launch.
+
+### Playlist (JSON file)
+
+The playlist is persisted as a JSON-encoded array of `StoredTrack` objects by `PlaylistManager`. This is a plain file — not UserDefaults.
+
+| Item | Value |
+|------|-------|
+| File path | `~/Library/Application Support/Manzo/playlist.json` |
+| Format | JSON array of `StoredTrack` (path, artist?, title?, duration) |
+| Written | On every mutation (add, remove, move) and on `applicationWillTerminate` |
+| Read | On `PlaylistManager.init()` at app launch |
 
 ---
 
