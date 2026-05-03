@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-04-24T19:30:00.000Z"
+status: planning
+last_updated: "2026-05-03T00:00:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 8
+  total_phases: 11
+  completed_phases: 9
   total_plans: 28
-  completed_plans: 25
-  percent: 89
+  completed_plans: 28
+  percent: 100
 ---
 
 # MANZO — Project State
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** A tactile, skeuomorphic music player that sounds and looks like Winamp — running native on Apple Silicon, with glass chrome you can feel and DSP math bit-accurate to the original.
-**Current focus:** UI paused — awaiting Claude Design handoff bundle
+**Current focus:** Phase 10.1 — YouTube Streaming
 
 ---
 
 ## Milestone: v1.0
 
-**Status:** Ready to plan
-**Phases:** 9 total
+**Status:** In progress
+**Phases:** 11 total
 
 | # | Phase | Status | Plans |
 |---|-------|--------|-------|
@@ -37,12 +37,13 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 | 5 | UI Shell | Complete (2/2) | 2 |
 | 6 | Neo-Aero Visual Stack | Complete (3/3) | 3 |
 | 7 | Spectrum Analyzer | Complete (3/3) | 3 |
-| 8 | Playlist & Library | Ready to execute (5/5) | 5 |
-| 8.1 | Transport Controls and LCD Display | Superseded — Claude Design handoff pending | 3 |
-| 9 | Complete UI Rewrite | In Progress | 0 |
-| 10 | Online Streaming | Not Started | 0 |
+| 8 | Playlist & Library | Complete (5/5) | 5 |
+| 8.1 | Transport Controls and LCD Display | Complete (3/3) | 3 |
+| 9 | Complete UI Rewrite | Complete — 2026-05-03 | 0 |
+| 10.1 | YouTube Streaming | Not Started | 0 |
+| 10.2 | SoundCloud Streaming | Not Started | 0 |
 
-**Progress:** [██████░░░░] 67% (6/9 phases complete)
+**Progress:** [█████████░] 82% (9/11 phases complete)
 
 ```
 [██████████████████████████████] 100% (Phase 01 plans: 3/3)
@@ -105,7 +106,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Blockers
 
-- **UI PAUSED — Claude Design handoff pending.** Phase 8.1 visual layer will be replaced by Claude Design output. Do not execute any UI phases or modify Swift view files until handoff bundle arrives.
+*(none)*
 
 ---
 
@@ -134,3 +135,4 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 2026-04-24 — Phase 8.1 UI-SPEC approved: transport controls and LCD display design contract complete; 6/6 dimensions PASS (typography FLAG non-blocking — 8pt/9pt 1pt diff intentional, Winamp-faithful); LCD green on black established as focal point; Winamp absolute coords locked as exceptions
 2026-04-24 — Phase 8.1 planned: 3 plans in 2 waves (Wave 1: ManzoLCDView+SeekBar+Slider + ManzoTransportButton+prev() in parallel; Wave 2: ManzoRootView layout methods + AppDelegate wiring + xcodebuild verify); all CTRL-01–04 covered; verification passed
 2026-04-24 — Phase 8.1 superseded: entire UI visual layer to be replaced by Claude Design handoff; UAT halted after 1/15 tests (LCD visible: pass); all UI work paused pending handoff bundle
+2026-05-03 — Phases 02–06 human UAT cleared; Phase 09 confirmed complete (all UI components implemented, window spec corrected to 540×116pt); blocker removed; current focus: Phase 10 Online Streaming

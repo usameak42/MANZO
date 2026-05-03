@@ -227,7 +227,7 @@ Plans:
 
 ### Phase 9: Complete UI Rewrite
 
-**Goal:** The main window, playlist window, and EQ window are pixel-accurately rebuilt to match the MANZO design system HTML spec — correct dimensions (275×116pt main window), VT323 LCD with green glow, teal→green seek/slider fills, Winamp-style transport row, dark playlist, and 10-band EQ with curve graph.
+**Goal:** The main window, playlist window, and EQ window are pixel-accurately rebuilt to match the MANZO design system HTML spec — correct dimensions (540×116pt main window), VT323 LCD with green glow, teal→green seek/slider fills, Winamp-style transport row, dark playlist, and 10-band EQ with curve graph.
 **Depends on:** Phase 8.1
 **Requirements:** CTRL-01, CTRL-02, CTRL-03, CTRL-04
 **UI hint:** yes
@@ -235,7 +235,7 @@ Plans:
 **Reference:** `/Users/usameak42/Coding/MANZO/manzo-design-system/project/manzo_ui_kit.html`
 
 **Success criteria:**
-1. Main window is exactly 275×116pt; titlebar shows traffic light dots + centered "MANZO" text; status bar shows "▶ PLAYING" left and "SHUF · REP · EQ" badges right.
+1. Main window is exactly 540×116pt; titlebar shows traffic light dots + centered "MANZO" text; status bar shows "▶ PLAYING" left and "SHUF · REP · EQ" badges right.
 2. LCD area renders VT323 timer with P3 green glow, scrolling marquee track title, kbps/kHz/STEREO specs, and spectrum analyzer in the top-right corner.
 3. Seek bar has teal→green gradient fill and white thumb; transport buttons match the glass-pill aesthetic from the HTML spec; VOL and BAL sliders use the same gradient fill.
 4. Playlist window has a dark background (not white/aqua) with blue-highlight active row; EQ window renders LED ON/OFF buttons, EQ curve graph, preamp + 10 band sliders (31Hz–16kHz), dB scale, and PRESETS button.
@@ -244,18 +244,34 @@ Plans:
 
 ---
 
-### Phase 10: Online Streaming
+### Phase 10.1: YouTube Streaming
 
-**Goal:** Users can paste a URL and stream audio via a bundled yt-dlp sidecar piped into the Rust audio pipeline, with the quarantine attribute stripped automatically on first launch.
+**Goal:** User can paste a YouTube URL into the ONLINE tab of the playlist panel; audio streams via yt-dlp stdout into the Rust pipeline; track appears in playlist and obeys all transport controls.
 **Depends on:** Phase 2, Phase 8
 **Requirements:** NET-01, NET-02, NET-03
 **UI hint:** yes
 
 **Success criteria:**
-1. The app bundle contains a yt-dlp universal binary at `Contents/MacOS/yt-dlp`; the binary is present and executable after installation without any manual setup.
-2. On first launch the app strips the quarantine extended attribute from the bundled yt-dlp binary; subsequent launches do not re-trigger the quarantine strip.
-3. User can paste a supported URL into a text field and press enter; audio begins playing within a few seconds via yt-dlp stdout piped into the Rust pipeline.
-4. The streamed URL track appears in the playlist and obeys the same play/pause/stop controls as local tracks.
+1. yt-dlp universal binary bundled at `Contents/MacOS/yt-dlp`; present and executable after installation without manual setup.
+2. Quarantine xattr stripped on first launch; subsequent launches do not re-trigger.
+3. YouTube URL → audio begins playing within a few seconds via yt-dlp stdout piped into the Rust pipeline.
+4. Track visible in ONLINE tab; play/pause/stop/seek work identically to local tracks.
+
+**Plans:** TBD
+
+---
+
+### Phase 10.2: SoundCloud Streaming
+
+**Goal:** User can paste a SoundCloud URL into the ONLINE tab; audio streams via the same yt-dlp pipeline established in Phase 10.1.
+**Depends on:** Phase 10.1
+**Requirements:** NET-01, NET-02, NET-03
+**UI hint:** yes
+
+**Success criteria:**
+1. SoundCloud URL → audio plays via the same yt-dlp pipeline with no changes to the Rust core.
+2. SC badge shown in the ONLINE tab row for SoundCloud tracks.
+3. No changes needed to Rust core.
 
 **Plans:** TBD
 
