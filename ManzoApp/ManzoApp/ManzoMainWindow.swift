@@ -288,17 +288,6 @@ final class ManzoBodyView: NSView {
                                 y: bounds.height - topBandH + (topBandH - anaH) / 2,
                                 width: anaW, height: anaH)
 
-        // Meta column between LCD and analyzer
-        let metaX   = lcd.frame.maxX + gap
-        let metaW   = analyzer.frame.minX - gap - metaX
-        let metaTop = bounds.height - 4
-        marquee.frame = NSRect(x: metaX, y: metaTop - 18,
-                               width: metaW, height: 18)
-        specs.frame   = NSRect(x: metaX, y: marquee.frame.minY - 5 - 12,
-                               width: metaW, height: 12)
-        seek.frame    = NSRect(x: metaX, y: specs.frame.minY - 5 - 10 + 2,
-                               width: metaW, height: 10)
-
         // Transport row
         let tY: CGFloat    = transportPadY
         let btnW: CGFloat  = 30, btnH: CGFloat = transportH, btnGap: CGFloat = 7
@@ -328,6 +317,14 @@ final class ManzoBodyView: NSView {
                              y: tY, width: pillW, height: btnH)
         eqBtn.frame = NSRect(x: pillsRight - pillW - pillGap - pillW,
                              y: tY, width: pillW, height: btnH)
+
+        // Meta column — bottom-up from transport row so seek always has
+        // a fixed gap from the buttons regardless of other layout changes
+        let metaX = lcd.frame.maxX + gap
+        let metaW = analyzer.frame.minX - gap - metaX
+        seek.frame    = NSRect(x: metaX, y: tY + btnH + 7, width: metaW, height: 10)
+        specs.frame   = NSRect(x: metaX, y: seek.frame.maxY + 4, width: metaW, height: 12)
+        marquee.frame = NSRect(x: metaX, y: specs.frame.maxY + 3, width: metaW, height: 18)
     }
 }
 
