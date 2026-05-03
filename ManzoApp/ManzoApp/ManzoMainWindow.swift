@@ -249,6 +249,7 @@ final class ManzoBodyView: NSView {
     private let volLabel = CapsLabel("vol")
     let volSlider = KnobSlider(value: 0.70)
     private let balLabel = CapsLabel("bal")
+    let balResetBtn = TransportButton(glyph: .balReset)
     let balSlider = KnobSlider(value: 0.50, centered: true, width: 40)
     let eqBtn = PillToggle(title: "EQ", isOn: false)
     let plBtn = PillToggle(title: "PL", isOn: true)
@@ -262,9 +263,16 @@ final class ManzoBodyView: NSView {
         specs.textColor = ManzoColor.fg3
         specs.isBezeled = false; specs.drawsBackground = false
 
+        balResetBtn.onTap = { [weak self] in
+            guard let self else { return }
+            self.balSlider.value = 0.5
+            self.balSlider.needsDisplay = true
+            self.balSlider.onValueChanged?(0.5)
+        }
+
         [lcd, marquee, specs, seek, analyzer,
          prev, play, pause, stop, next, eject,
-         volLabel, volSlider, balLabel, balSlider,
+         volLabel, volSlider, balLabel, balResetBtn, balSlider,
          eqBtn, plBtn].forEach { addSubview($0) }
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -307,7 +315,10 @@ final class ManzoBodyView: NSView {
 
         balLabel.sizeToFit()
         balLabel.frame.origin = NSPoint(x: x, y: tY + (btnH - balLabel.frame.height) / 2)
-        x += balLabel.frame.width + 6
+        x += balLabel.frame.width + 4
+        let brH: CGFloat = 16
+        balResetBtn.frame = NSRect(x: x, y: tY + (btnH - brH) / 2, width: 14, height: brH)
+        x += 14 + 4
         balSlider.frame = NSRect(x: x, y: tY + (btnH - 8) / 2, width: 45, height: 8)
 
         // EQ / PL pills — right-anchored
@@ -322,7 +333,7 @@ final class ManzoBodyView: NSView {
         // a fixed gap from the buttons regardless of other layout changes
         let metaX = lcd.frame.maxX + gap
         let metaW = analyzer.frame.minX - gap - metaX
-        seek.frame    = NSRect(x: metaX, y: tY + btnH + 7, width: metaW, height: 10)
+        seek.frame    = NSRect(x: metaX, y: tY + btnH + 12, width: metaW, height: 10)
         specs.frame   = NSRect(x: metaX, y: seek.frame.maxY + 4, width: metaW, height: 12)
         marquee.frame = NSRect(x: metaX, y: specs.frame.maxY + 3, width: metaW, height: 18)
     }
@@ -410,6 +421,13 @@ final class SeekBar: NSView {
     var isDragging: Bool = false
     var onSeek: ((Double) -> Void)?
 
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.masksToBounds = true
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
     override func mouseDown(with event: NSEvent) {
         isDragging = true
         updateProgress(from: event)
@@ -433,23 +451,26 @@ final class SeekBar: NSView {
         let tp = NSBezierPath(roundedRect: track, xRadius: 2, yRadius: 2)
         ManzoColor.p3(0, 0, 0, 0.45).setFill(); tp.fill()
 
-        // Fill gradient
+        // Fill gradient — guard progress > 0 to avoid degenerate zero-width clip path
         let fillRect = NSRect(x: track.minX, y: track.minY,
                               width: track.width * progress, height: track.height)
-        ctx.saveGState()
-        NSBezierPath(roundedRect: fillRect, xRadius: 2, yRadius: 2).setClip()
-        let space = CGColorSpace(name: CGColorSpace.displayP3)!
-        let colors = [ManzoColor.tealStart.cgColor, ManzoColor.greenEnd.cgColor] as CFArray
-        if let g = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) {
-            ctx.drawLinearGradient(g,
-                                   start: CGPoint(x: fillRect.minX, y: 0),
-                                   end:   CGPoint(x: fillRect.maxX, y: 0),
-                                   options: [])
+        if fillRect.width > 1 {
+            ctx.saveGState()
+            NSBezierPath(roundedRect: fillRect, xRadius: 2, yRadius: 2).setClip()
+            let space = CGColorSpace(name: CGColorSpace.displayP3)!
+            let colors = [ManzoColor.tealStart.cgColor, ManzoColor.greenEnd.cgColor] as CFArray
+            if let g = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) {
+                ctx.drawLinearGradient(g,
+                                       start: CGPoint(x: fillRect.minX, y: 0),
+                                       end:   CGPoint(x: fillRect.maxX, y: 0),
+                                       options: [])
+            }
+            ctx.restoreGState()
         }
-        ctx.restoreGState()
 
-        // Thumb 8×10
-        let thumb = NSRect(x: fillRect.maxX - 4, y: track.midY - 5, width: 8, height: 10)
+        // Thumb — clamped so it never exits the track horizontally
+        let thumbX = max(track.minX, min(track.maxX - 8, fillRect.maxX - 4))
+        let thumb = NSRect(x: thumbX, y: track.midY - 5, width: 8, height: 10)
         let tPath = NSBezierPath(roundedRect: thumb, xRadius: 2, yRadius: 2)
         NSColor.white.setFill(); tPath.fill()
     }
@@ -512,7 +533,7 @@ final class KnobSlider: NSView {
 
         // Thumb
         let thumbX = track.minX + track.width * value
-        let thumb = NSRect(x: thumbX - 5, y: -3, width: 10, height: 14)
+        let thumb = NSRect(x: thumbX - 5, y: 0, width: 10, height: 8)
         let tPath = NSBezierPath(roundedRect: thumb, xRadius: 2, yRadius: 2)
         ManzoColor.p3(0.90, 0.91, 0.93).setFill(); tPath.fill()
         ManzoColor.p3(0, 0, 0, 0.5).setStroke()
@@ -524,7 +545,7 @@ final class KnobSlider: NSView {
 
 final class TransportButton: NSControl {
 
-    enum Glyph { case prev, play, pause, stop, next, eject }
+    enum Glyph { case prev, play, pause, stop, next, eject, balReset }
 
     let glyph: Glyph
 
@@ -633,13 +654,8 @@ final class TransportButton: NSControl {
                                        options: [])
             }
         }
-        ctx.restoreGState()
 
-        // ─ Outer dark rim ────────────────────────────────────────────────
-        ManzoColor.p3(0, 0, 0, isPressed ? 0.75 : 0.6).setStroke()
-        path.lineWidth = 1; path.stroke()
-
-        // ─ Top hairline highlight ────────────────────────────────────────
+        // ─ Top/bottom hairline highlight (inside clip so it stays within rounded rect)
         let hi = NSBezierPath()
         if isPressed {
             hi.move(to: NSPoint(x: rect.minX + 1, y: rect.minY + 0.5))
@@ -648,9 +664,14 @@ final class TransportButton: NSControl {
         } else {
             hi.move(to: NSPoint(x: rect.minX + 1, y: rect.maxY - 0.5))
             hi.line(to: NSPoint(x: rect.maxX - 1, y: rect.maxY - 0.5))
-            ManzoColor.p3(1, 1, 1, 0.45).setStroke()
+            ManzoColor.p3(1, 1, 1, 0.25).setStroke()
         }
         hi.lineWidth = 1; hi.stroke()
+        ctx.restoreGState()
+
+        // ─ Outer dark rim ────────────────────────────────────────────────
+        ManzoColor.p3(0, 0, 0, isPressed ? 0.75 : 0.6).setStroke()
+        path.lineWidth = 1; path.stroke()
 
         // ─ Glyph ─────────────────────────────────────────────────────────
         let ink = isPressed
@@ -704,6 +725,15 @@ final class TransportButton: NSControl {
             p.line(to: NSPoint(x: cx - 5, y: cy - 1))
             p.close(); p.fill()
             NSBezierPath(rect: NSRect(x: cx - 5, y: cy - 4, width: 10, height: 2)).fill()
+        case .balReset:
+            // Center bar: ─|─  (balance neutral indicator)
+            NSBezierPath(rect: NSRect(x: cx - 0.75, y: cy - 3.5, width: 1.5, height: 7)).fill()
+            let wings = NSBezierPath()
+            wings.move(to: NSPoint(x: cx - 4, y: cy))
+            wings.line(to: NSPoint(x: cx - 1.5, y: cy))
+            wings.move(to: NSPoint(x: cx + 1.5, y: cy))
+            wings.line(to: NSPoint(x: cx + 4, y: cy))
+            wings.lineWidth = 1.5; wings.stroke()
         }
     }
 }
@@ -785,6 +815,7 @@ final class SpectrumView: NSView {
     var manzoHandle: UnsafeMutablePointer<manzo_ManzoHandle>? = nil
 
     private let cols = 20
+    var isPlaying: Bool = true
     private var heights: [CGFloat]
     private var peaks:   [CGFloat]
     private var displayLink: CVDisplayLink?
@@ -817,15 +848,24 @@ final class SpectrumView: NSView {
 
     private func advance() {
         if let handle = manzoHandle {
-            var buf = [Float](repeating: 0, count: cols)
-            buf.withUnsafeMutableBufferPointer { ptr in
-                manzo_get_spectrum(handle, ptr.baseAddress, UInt(cols))
-            }
-            for i in 0..<cols {
-                let raw = CGFloat(buf[i])
-                heights[i] = min(1.0, heights[i] + (raw - heights[i]) * 0.25)
-                if heights[i] > peaks[i] { peaks[i] = heights[i] }
-                else { peaks[i] = max(0, peaks[i] - 0.008) }
+            if isPlaying {
+                var buf = [Float](repeating: 0, count: cols)
+                buf.withUnsafeMutableBufferPointer { ptr in
+                    manzo_get_spectrum(handle, ptr.baseAddress, UInt(cols))
+                }
+                for i in 0..<cols {
+                    let gained = min(1.0, CGFloat(buf[i]) * 2.5)
+                let scaled = pow(gained, 0.35)
+                    heights[i] = min(1.0, heights[i] + (scaled - heights[i]) * 0.25)
+                    if heights[i] > peaks[i] { peaks[i] = heights[i] }
+                    else { peaks[i] = max(0, peaks[i] - 0.008) }
+                }
+            } else {
+                // Stopped — decay bars to zero
+                for i in 0..<cols {
+                    heights[i] = max(0, heights[i] - 0.04)
+                    peaks[i]   = max(0, peaks[i]   - 0.02)
+                }
             }
         } else {
             t += 0.016

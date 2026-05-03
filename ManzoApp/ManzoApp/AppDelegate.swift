@@ -41,6 +41,7 @@ import AppKit
             } else {
                 let playResult = manzo_play(manzoHandle!)
                 if playResult == 0 {
+                    analyzerView?.isPlaying = true
                     NSLog("MANZO Phase 8: playback started — \(firstTrack.path)")
                 } else {
                     NSLog("MANZO Phase 8: manzo_play failed with code \(playResult)")
@@ -93,6 +94,7 @@ import AppKit
             seekBarView   = body.seek
             analyzerView  = body.analyzer
             analyzerView?.manzoHandle = manzoHandle
+            analyzerView?.isPlaying   = (manzoHandle != nil)
 
             body.seek.onSeek = { [weak self] ratio in
                 guard let self, let h = self.manzoHandle else { return }
@@ -115,6 +117,7 @@ import AppKit
             body.stop.onTap  = { [weak self] in
                 guard let handle = self?.manzoHandle else { return }
                 manzo_stop(handle)
+                self?.analyzerView?.isPlaying = false
             }
             body.next.onTap  = { [weak self] in
                 guard let self = self else { return }
@@ -250,6 +253,7 @@ import AppKit
         }
         let playResult = manzo_play(nextHandle)
         analyzerView?.manzoHandle = nextHandle
+        analyzerView?.isPlaying = playResult == 0
         NSLog("MANZO Phase 8: auto-advance to \(nextPath) — play result: \(playResult)")
         if let track = playlistManager.trackAt(playlistManager.currentIndex) {
             let title = track.title ?? (track.path as NSString).lastPathComponent
@@ -475,9 +479,11 @@ extension AppDelegate {
         let state = manzo_get_state(handle)
         if state == MANZO_STATE_PLAYING {
             manzo_pause(handle)
+            analyzerView?.isPlaying = false
             NSLog("MANZO Phase 8.1: handlePlayPauseButton — was PLAYING, now paused")
         } else {
             manzo_play(handle)
+            analyzerView?.isPlaying = true
             NSLog("MANZO Phase 8.1: handlePlayPauseButton — was PAUSED/STOPPED, now playing")
         }
     }
