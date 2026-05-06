@@ -6,7 +6,7 @@ pub mod eq10;
 use eq10::{Eq10State, eq10_processf, eq10_db2gain};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::ffi::CStr;
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::sync::atomic::{AtomicUsize, AtomicBool, AtomicI32, Ordering};
@@ -20,6 +20,8 @@ pub struct ManzoHandle {
 
 /// Feed chunk size in bytes — validated pattern from spike 003; do not change.
 const FEED_CHUNK_SIZE: usize = 4096;
+
+enum StreamSource { File, Url }
 
 /// Lock-free control flags shared between the UI thread and the audio callback.
 /// Separated from InnerState so manzo_pause/manzo_stop never need to acquire
@@ -82,6 +84,10 @@ struct InnerState {
     // The feed/push API does not support mpg123_scan(); a secondary handle with mpg123_open()
     // is used for duration probing while the primary handle keeps the feed API for streaming.
     total_samples: i64,
+    // Phase 10.1: discriminates file vs URL stream — gates feed path and seek behavior
+    stream_source: StreamSource,
+    // Phase 10.1: URL stream receiver — chunks pushed by curl reader thread, consumed by audio callback
+    stream_rx: Option<mpsc::Receiver<Vec<u8>>>,
 }
 
 // SAFETY: mpg_handle is only accessed while holding the Mutex.
@@ -228,12 +234,165 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
         pan_ramp_remaining: 0,
         startup_skip_remaining: 529, // D-04: trim mpg123 decoder delay on first decode
         total_samples,               // D-03: cached at open time via secondary file-API probe
+        stream_source: StreamSource::File,
+        stream_rx: None,
     };
 
     let arc = Arc::new(HandleInner {
         inner: Mutex::new(inner),
         control_playing: AtomicBool::new(false),
         control_state: AtomicI32::new(3), // STOPPED on fresh open
+    });
+    Box::into_raw(Box::new(arc)) as *mut ManzoHandle
+}
+
+/// Opens a YouTube or streaming URL for playback via yt-dlp + curl.
+/// Non-blocking: resolves the CDN URL synchronously (~1–2 s), then returns immediately.
+/// A background thread streams audio chunks into the mpg123 feed buffer.
+/// Seek is a no-op for URL handles. Duration returns 0 (unknown).
+#[no_mangle]
+pub extern "C" fn manzo_open_url(
+    url: *const std::os::raw::c_char,
+    ytdlp_path: *const std::os::raw::c_char,
+) -> *mut ManzoHandle {
+    if url.is_null() || ytdlp_path.is_null() {
+        return std::ptr::null_mut();
+    }
+    let url_str = unsafe {
+        match CStr::from_ptr(url).to_str() {
+            Ok(s) => s.to_owned(),
+            Err(_) => return std::ptr::null_mut(),
+        }
+    };
+    let ytdlp_str = unsafe {
+        match CStr::from_ptr(ytdlp_path).to_str() {
+            Ok(s) => s.to_owned(),
+            Err(_) => return std::ptr::null_mut(),
+        }
+    };
+
+    // Resolve CDN audio URL via yt-dlp (synchronous, ~1–2 s)
+    let output = match std::process::Command::new(&ytdlp_str)
+        .args([
+            "--get-url",
+            "--format", "bestaudio[ext=mp3]/bestaudio[ext=m4a]/bestaudio",
+            "--no-playlist",
+            url_str.as_str(),
+        ])
+        .output()
+    {
+        Ok(o) => o,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    if !output.status.success() {
+        eprintln!("manzo_open_url: yt-dlp exited with error: {}",
+            String::from_utf8_lossy(&output.stderr).trim());
+        return std::ptr::null_mut();
+    }
+    // Some formats return multiple lines (DASH manifests); take only the first CDN URL.
+    let cdn_url = match std::str::from_utf8(&output.stdout) {
+        Ok(s) => s.lines().next().unwrap_or("").trim().to_owned(),
+        Err(_) => return std::ptr::null_mut(),
+    };
+    if cdn_url.is_empty() {
+        return std::ptr::null_mut();
+    }
+    if cdn_url.contains("mime=audio/mp4") || cdn_url.ends_with(".m4a") {
+        eprintln!("manzo_open_url: WARNING — CDN URL is m4a/mp4; mpg123 may struggle with this format");
+    }
+    eprintln!("manzo_open_url: resolved CDN URL (first 120 chars): {}", &cdn_url[..cdn_url.len().min(120)]);
+
+    // Init mpg123 in feed mode — identical to manzo_open
+    unsafe { mpg123_sys::mpg123_init() };
+    let mut err: libc::c_int = 0;
+    let mh = unsafe { mpg123_sys::mpg123_new(std::ptr::null(), &mut err) };
+    if mh.is_null() {
+        return std::ptr::null_mut();
+    }
+    let param_ret = unsafe {
+        mpg123_sys::mpg123_param(
+            mh,
+            mpg123_sys::MPG123_FLAGS,
+            mpg123_sys::MPG123_FORCE_FLOAT as libc::c_long,
+            0.0,
+        )
+    };
+    if param_ret != 0 {
+        unsafe { mpg123_sys::mpg123_delete(mh); }
+        return std::ptr::null_mut();
+    }
+    if unsafe { mpg123_sys::mpg123_open_feed(mh) } != 0 {
+        unsafe { mpg123_sys::mpg123_delete(mh); }
+        return std::ptr::null_mut();
+    }
+
+    // Spawn reader thread: curl → stdout → mpsc channel
+    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+    std::thread::spawn(move || {
+        let mut child = match std::process::Command::new("curl")
+            .args(["-s", "-L", cdn_url.as_str()])
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        let mut stdout = match child.stdout.take() {
+            Some(s) => s,
+            None => return,
+        };
+        use std::io::Read;
+        let mut buf = vec![0u8; FEED_CHUNK_SIZE];
+        loop {
+            match stdout.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if tx.send(buf[..n].to_vec()).is_err() {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+        let _ = child.wait();
+    });
+
+    let inner = InnerState {
+        mpg_handle: mh,
+        file_data: Vec::new(),
+        file_offset: 0,
+        stream: None,
+        position_samples: 0,
+        sample_rate: 44100,
+        channels: 2,
+        eq_gains: [0.0; 10],
+        eq_preamp: 0.0,
+        preamp_gain_linear: 1.0,
+        eq_l: Eq10State::new(44100.0),
+        eq_r: Eq10State::new(44100.0),
+        config_eq_limiter: true,
+        fft_sample_buf: [0.0f32; 1024],
+        fft_sample_pos: 0,
+        fft_samples_since_last: 0,
+        fft_bufs: [[0.0f32; 75]; 2],
+        fft_write_idx: 0,
+        fft_read_idx: AtomicUsize::new(0),
+        target_volume: 1.0,
+        current_volume: 1.0,
+        vol_ramp_remaining: 0,
+        target_pan: 0.0,
+        current_pan: 0.0,
+        pan_ramp_remaining: 0,
+        startup_skip_remaining: 0, // no decoder startup delay for URL streams
+        total_samples: -1,         // duration unknown for streams
+        stream_source: StreamSource::Url,
+        stream_rx: Some(rx),
+    };
+
+    let arc = Arc::new(HandleInner {
+        inner: Mutex::new(inner),
+        control_playing: AtomicBool::new(false),
+        control_state: AtomicI32::new(3),
     });
     Box::into_raw(Box::new(arc)) as *mut ManzoHandle
 }
@@ -371,24 +530,54 @@ pub extern "C" fn manzo_play(handle: *mut ManzoHandle) -> i32 {
                 s.position_samples += frames_written as u64 / s.channels as u64;
 
                 if ret == mpg123_sys::MPG123_NEED_MORE as libc::c_int {
-                    // Feed next chunk from file_data
-                    let start = s.file_offset;
-                    let end = (start + FEED_CHUNK_SIZE).min(s.file_data.len());
-                    if start < s.file_data.len() {
-                        unsafe {
-                            mpg123_sys::mpg123_feed(
-                                s.mpg_handle,
-                                s.file_data[start..end].as_ptr(),
-                                end - start,
-                            );
+                    match s.stream_source {
+                        StreamSource::File => {
+                            let start = s.file_offset;
+                            let end = (start + FEED_CHUNK_SIZE).min(s.file_data.len());
+                            if start < s.file_data.len() {
+                                unsafe {
+                                    mpg123_sys::mpg123_feed(
+                                        s.mpg_handle,
+                                        s.file_data[start..end].as_ptr(),
+                                        end - start,
+                                    );
+                                }
+                                s.file_offset = end;
+                            } else if frames_written == 0 {
+                                // EOF — fill remainder with silence; signal ENDED (D-02)
+                                data[written..].fill(0.0);
+                                inner_clone.control_playing.store(false, Ordering::Relaxed);
+                                inner_clone.control_state.store(4, Ordering::Relaxed);
+                                break;
+                            }
                         }
-                        s.file_offset = end;
-                    } else if frames_written == 0 {
-                        // EOF — fill remainder with silence; signal ENDED to Swift poller (D-02)
-                        data[written..].fill(0.0);
-                        inner_clone.control_playing.store(false, Ordering::Relaxed);
-                        inner_clone.control_state.store(4, Ordering::Relaxed); // ENDED — Swift auto-advances
-                        break;
+                        StreamSource::Url => {
+                            match s.stream_rx.as_ref().map(|rx| rx.try_recv()) {
+                                Some(Ok(chunk)) => {
+                                    unsafe {
+                                        mpg123_sys::mpg123_feed(
+                                            s.mpg_handle,
+                                            chunk.as_ptr(),
+                                            chunk.len(),
+                                        );
+                                    }
+                                }
+                                Some(Err(mpsc::TryRecvError::Empty)) => {
+                                    // Network stall — output silence this callback cycle
+                                    if frames_written == 0 {
+                                        data[written..].fill(0.0);
+                                        break;
+                                    }
+                                }
+                                Some(Err(mpsc::TryRecvError::Disconnected)) | None => {
+                                    // curl exited — stream ended
+                                    data[written..].fill(0.0);
+                                    inner_clone.control_playing.store(false, Ordering::Relaxed);
+                                    inner_clone.control_state.store(4, Ordering::Relaxed);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 } else if ret != 0 && frames_written == 0 {
                     // Unrecoverable error or EOF
@@ -610,6 +799,10 @@ pub extern "C" fn manzo_seek(handle: *mut ManzoHandle, position_ms: u64) -> i32 
     }
     let arc = unsafe { &*(handle as *mut Arc<HandleInner>) };
     let mut state = arc.inner.lock().unwrap_or_else(|e| e.into_inner());
+
+    if matches!(state.stream_source, StreamSource::Url) {
+        return 0; // seek is meaningless on a live stream
+    }
 
     let sample_pos = (position_ms * state.sample_rate as u64) / 1000;
     let mut input_byte_offset: libc::off_t = 0;

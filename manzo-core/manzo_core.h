@@ -23,6 +23,14 @@ typedef struct manzo_ManzoHandle {
 struct manzo_ManzoHandle *manzo_open(const char *path);
 
 /**
+ * Opens a YouTube or streaming URL for playback via yt-dlp + curl.
+ * Non-blocking: resolves the CDN URL synchronously (~1–2 s), then returns immediately.
+ * A background thread streams audio chunks into the mpg123 feed buffer.
+ * Seek is a no-op for URL handles. Duration returns 0 (unknown).
+ */
+struct manzo_ManzoHandle *manzo_open_url(const char *url, const char *ytdlp_path);
+
+/**
  * Closes and frees the handle returned by manzo_open.
  */
 void manzo_close(struct manzo_ManzoHandle *handle);
