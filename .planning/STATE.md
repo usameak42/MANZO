@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-05-03T00:00:00.000Z"
+last_updated: "2026-05-06T00:00:00.000Z"
 progress:
   total_phases: 11
   completed_phases: 9
@@ -40,7 +40,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 | 8 | Playlist & Library | Complete (5/5) | 5 |
 | 8.1 | Transport Controls and LCD Display | Complete (3/3) | 3 |
 | 9 | Complete UI Rewrite | Complete — 2026-05-03 | 0 |
-| 10.1 | YouTube Streaming | Not Started | 0 |
+| 10.1 | YouTube Streaming | In Progress | 0 |
 | 10.2 | SoundCloud Streaming | Not Started | 0 |
 
 **Progress:** [█████████░] 82% (9/11 phases complete)
@@ -120,6 +120,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Last Activity
 
+2026-05-06 — Phase 10.1 streaming prototype: yt-dlp+ffmpeg→Rust pipeline wired (commit 9cc0522); ManzoOnlineQueue model; ManzoPlaylistPanel rewritten with LOCAL+ONLINE tabs; manzo_open_url FFI added (incremental curl stream, fixes 512 KB truncation); playlist panel UX fixes: canBecomeKey, onRemoveTracks selected-row fix, URL input vertical centering, SUBMIT↵/ADD↵ button labels, ghost hint improvements
 2026-05-01 — ManzoEQPanel.swift wired in AppDelegate; macOS 26 SDK compile errors fixed; clean build green
 2026-04-20 — Phase 1 complete: Rust staticlib + cbindgen FFI bridge + Xcode wiring verified
 2026-04-22 — Phase 2 complete: mpg123-sys + cpal float32 pipeline; audible playback confirmed

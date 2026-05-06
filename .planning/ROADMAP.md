@@ -3,7 +3,7 @@
 **Milestone:** v1.0 — Initial Release
 **Granularity:** Fine
 **Requirements:** 32 v1 requirements
-**Last updated:** 2026-04-23
+**Last updated:** 2026-05-03
 
 ---
 
@@ -15,11 +15,12 @@
 - [x] **Phase 4: DSP Engine** — 10-band Rust EQ (eq10dsp.cpp port), volume, and pan controls
 - [x] **Phase 5: UI Shell** — Frameless NSWindow, single-root vibrancy, drag region, window persistence
 - [x] **Phase 6: Neo-Aero Visual Stack** — 5-layer CALayer specular stack, CAReplicatorLayer reflection, P3 color
-- [ ] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
-- [ ] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
+- [x] **Phase 7: Spectrum Analyzer** — MTKView FFT pipeline, SDF single-pass bloom, CADisplayLink render loop
+- [x] **Phase 8: Playlist & Library** — File picker, drag-reorder, track removal, playlist persistence
 - [x] **Phase 8.1: Transport Controls and LCD Display** — Winamp-style LCD, transport buttons, seek bar, volume/pan sliders (INSERTED)
-- [ ] **Phase 9: Complete UI Rewrite** — pixel-accurate implementation of MANZO design system from HTML spec
-- [ ] **Phase 10: Online Streaming** — yt-dlp sidecar bundle, URL streaming, quarantine strip
+- [x] **Phase 9: Complete UI Rewrite** — pixel-accurate implementation of MANZO design system from HTML spec
+- [ ] **Phase 10.1: YouTube Streaming** — yt-dlp sidecar bundle, YouTube URL streaming, quarantine strip
+- [ ] **Phase 10.2: SoundCloud Streaming** — SoundCloud URL streaming via same yt-dlp pipeline
 
 ---
 
@@ -130,8 +131,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — ManzoWindow.swift + ManzoRootView.swift: frameless window subclass, single-root vibrancy, three panel NSViews, drag handler
-- [ ] 05-02-PLAN.md — AppDelegate wiring: window construction, contentView, orderFront, setFrameAutosaveName, xcodegen verify, visual checkpoint
+- [x] 05-01-PLAN.md — ManzoWindow.swift + ManzoRootView.swift: frameless window subclass, single-root vibrancy, three panel NSViews, drag handler
+- [x] 05-02-PLAN.md — AppDelegate wiring: window construction, contentView, orderFront, setFrameAutosaveName, xcodegen verify, visual checkpoint
 
 ---
 
@@ -151,9 +152,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — NeoAeroLayerFactory + ManzoVisualStyle data models (new files)
-- [ ] 06-02-PLAN.md — ManzoRootView.applyStyle() + wet-floor CAReplicatorLayer + cornerRadius=10
-- [ ] 06-03-PLAN.md — AppDelegate wiring + xcodebuild verify + visual checkpoint
+- [x] 06-01-PLAN.md — NeoAeroLayerFactory + ManzoVisualStyle data models (new files)
+- [x] 06-02-PLAN.md — ManzoRootView.applyStyle() + wet-floor CAReplicatorLayer + cornerRadius=10
+- [x] 06-03-PLAN.md — AppDelegate wiring + xcodebuild verify + visual checkpoint
 
 ---
 
@@ -173,9 +174,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Rust FFT pipeline: rustfft dependency, InnerState FFT fields, audio callback computation, live manzo_get_spectrum
-- [ ] 07-02-PLAN.md — Metal renderer: ManzoSpectrumView MTKView, Spectrum.metal SDF bloom shaders, project.yml Metal frameworks
-- [ ] 07-03-PLAN.md — Integration: wire into ManzoRootView/AppDelegate, NeoAeroContainer chrome mask, build + visual verification
+- [x] 07-01-PLAN.md — Rust FFT pipeline: rustfft dependency, InnerState FFT fields, audio callback computation, live manzo_get_spectrum
+- [x] 07-02-PLAN.md — Metal renderer: ManzoSpectrumView MTKView, Spectrum.metal SDF bloom shaders, project.yml Metal frameworks
+- [x] 07-03-PLAN.md — Integration: wire into ManzoRootView/AppDelegate, NeoAeroContainer chrome mask, build + visual verification
 
 ---
 
@@ -199,7 +200,7 @@ Plans:
 - [x] 08-02-PLAN.md — ManzoPlaylistPanel + PlaylistRowView (visual shell + NeoAero chrome)
 - [x] 08-03-PLAN.md — AppDelegate wiring (PlaylistManager integration, PL button, co-move, Alt+E)
 - [x] 08-04-PLAN.md — NSTableView drag-reorder + Delete key + right-click context menu
-- [ ] 08-05-PLAN.md — Build verification + end-to-end UAT checkpoint
+- [x] 08-05-PLAN.md — Build verification + end-to-end UAT checkpoint
 
 ---
 
@@ -284,14 +285,15 @@ Plans:
 | 1. Build Foundation | 3/3 | Complete | 2026-04-20 |
 | 2. Audio Pipeline | 3/3 | Complete | 2026-04-22 |
 | 3. Playback Controls | 3/3 | Complete | 2026-04-22 |
-| 4. DSP Engine | 0/3 | Not started | - |
-| 5. UI Shell | 0/2 | Not started | - |
-| 6. Neo-Aero Visual Stack | 0/? | Not started | - |
-| 7. Spectrum Analyzer | 0/? | Not started | - |
-| 8. Playlist & Library | 0/? | Not started | - |
+| 4. DSP Engine | 3/3 | Complete | 2026-04-23 |
+| 5. UI Shell | 2/2 | Complete | 2026-04-23 |
+| 6. Neo-Aero Visual Stack | 3/3 | Complete | 2026-04-24 |
+| 7. Spectrum Analyzer | 3/3 | Complete | 2026-04-24 |
+| 8. Playlist & Library | 5/5 | Complete | 2026-04-24 |
 | 8.1. Transport Controls and LCD Display | 3/3 | Complete | 2026-04-24 |
-| 9. Complete UI Rewrite | 0/? | Not started | - |
-| 10. Online Streaming | 0/? | Not started | - |
+| 9. Complete UI Rewrite | 0/0 | Complete | 2026-05-03 |
+| 10.1. YouTube Streaming | 0/? | In progress | - |
+| 10.2. SoundCloud Streaming | 0/? | Not started | - |
 
 ---
 
