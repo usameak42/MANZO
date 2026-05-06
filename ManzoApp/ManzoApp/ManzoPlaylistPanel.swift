@@ -171,7 +171,7 @@ public final class ManzoPlaylistPanel: NSPanel {
         self.level = .floating
         self.contentView = view
     }
-    public override var canBecomeKey: Bool  { false }
+    public override var canBecomeKey: Bool  { true }
     public override var canBecomeMain: Bool { false }
 }
 
@@ -960,6 +960,8 @@ private final class URLBarView: NSView, NSTextFieldDelegate {
         addSubview(addBtn)
         clearBtn.onClick = { [weak self] in self?.onClearAll?() }
         addSubview(clearBtn)
+
+        field.onFocusChange = { [weak self] in self?.updateButtonLabel() }
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -974,7 +976,7 @@ private final class URLBarView: NSView, NSTextFieldDelegate {
         updateDetector()
     }
 
-    func clearText() { field.stringValue = ""; updateDetector() }
+    func clearText() { field.stringValue = ""; updateDetector(); updateButtonLabel() }
 
     @objc private func submit() {
         let raw = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -990,6 +992,7 @@ private final class URLBarView: NSView, NSTextFieldDelegate {
 
     public func controlTextDidChange(_ obj: Notification) {
         updateDetector()
+        updateButtonLabel()
         if case .error = state { setState(.idle) }
         if case .success = state { setState(.idle) }
     }
@@ -1017,6 +1020,31 @@ private final class URLBarView: NSView, NSTextFieldDelegate {
         detector.layer?.backgroundColor = (src == .youtube ? PLColor.ytRed : PLColor.scOrange).cgColor
         detector.alphaValue = (state.isValidating ? 0 : 1)
         needsLayout = true
+    }
+
+    private func updateButtonLabel() {
+        let raw = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !raw.isEmpty {
+            addBtn.title = "ADD ↵"
+            setPlaceholderVisible(true)
+        } else if field.currentEditor() != nil, clipboardHint != nil {
+            addBtn.title = "SUBMIT ↵"
+            setPlaceholderVisible(false)
+        } else {
+            addBtn.title = "ADD"
+            setPlaceholderVisible(true)
+        }
+    }
+
+    private func setPlaceholderVisible(_ visible: Bool) {
+        if visible {
+            field.placeholderAttributedString = NSAttributedString(
+                string: "paste youtube or soundcloud url…",
+                attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                             .foregroundColor: PLColor.p3(0.50, 0.52, 0.58)])
+        } else {
+            field.placeholderAttributedString = nil
+        }
     }
 
     private func detectClipboardURL() -> String? {
@@ -1103,10 +1131,16 @@ private final class URLBarView: NSView, NSTextFieldDelegate {
                        .withTraits(italic: true),
                 .foregroundColor: PLColor.p3(0.45, 0.50, 0.58, 0.85),
             ]
-            let display = "⏎ paste \(hint)" as NSString
-            display.draw(at: NSPoint(x: fieldRect.minX + 10,
-                                     y: fieldRect.minY + (fieldH - 14) / 2),
-                         withAttributes: attr)
+            let display = hint as NSString
+            let textH = display.size(withAttributes: attr).height
+            if let ctx = NSGraphicsContext.current?.cgContext {
+                ctx.saveGState()
+                ctx.clip(to: fieldRect.insetBy(dx: 6, dy: 0))
+                display.draw(at: NSPoint(x: fieldRect.minX + 10,
+                                         y: fieldRect.minY + (fieldH - textH) / 2),
+                             withAttributes: attr)
+                ctx.restoreGState()
+            }
         }
     }
 }
@@ -1124,24 +1158,52 @@ private extension NSFont {
     }
 }
 
+private final class CenteredTextFieldCell: NSTextFieldCell {
+    override func drawingRect(forBounds rect: NSRect) -> NSRect {
+        let s = super.drawingRect(forBounds: rect)
+        let textH = cellSize(forBounds: rect).height
+        let y = s.minY + max(0, (s.height - textH) / 2)
+        return NSRect(x: s.minX, y: y, width: s.width, height: textH)
+    }
+    override func edit(withFrame rect: NSRect, in controlView: NSView,
+                       editor textObj: NSText, delegate: Any?, event: NSEvent?) {
+        super.edit(withFrame: drawingRect(forBounds: rect), in: controlView,
+                   editor: textObj, delegate: delegate, event: event)
+    }
+    override func select(withFrame rect: NSRect, in controlView: NSView,
+                         editor textObj: NSText, delegate: Any?,
+                         start selStart: Int, length selLength: Int) {
+        super.select(withFrame: drawingRect(forBounds: rect), in: controlView,
+                     editor: textObj, delegate: delegate, start: selStart, length: selLength)
+    }
+}
+
 private final class URLTextField: NSTextField {
+    var onFocusChange: (() -> Void)?
+    override class var cellClass: AnyClass? {
+        get { CenteredTextFieldCell.self }
+        set { _ = newValue }
+    }
     override func becomeFirstResponder() -> Bool {
         let r = super.becomeFirstResponder()
         if let editor = currentEditor() as? NSTextView {
             editor.insertionPointColor = PLColor.fg2
         }
         superview?.needsDisplay = true
+        onFocusChange?()
         return r
     }
     override func resignFirstResponder() -> Bool {
         let r = super.resignFirstResponder()
         superview?.needsDisplay = true
+        onFocusChange?()
         return r
     }
 }
 
 private final class AddButton: NSView {
     var onClick: (() -> Void)?
+    var title: String = "ADD" { didSet { sizeToFit(); needsDisplay = true; superview?.needsLayout = true } }
     private var hovered = false { didSet { needsDisplay = true } }
     private var pressed = false { didSet { needsDisplay = true } }
     private var trackingArea: NSTrackingArea?
@@ -1152,7 +1214,11 @@ private final class AddButton: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     func sizeToFit() {
-        frame.size = NSSize(width: 56, height: 22)
+        let attr: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .semibold),
+            .kern: 1.6]
+        let w = (title as NSString).size(withAttributes: attr).width
+        frame.size = NSSize(width: ceil(w) + 20, height: 22)
     }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -1199,7 +1265,7 @@ private final class AddButton: NSView {
             .foregroundColor: NSColor.white,
             .kern: 1.6,
         ]
-        let s = "ADD" as NSString
+        let s = title as NSString
         let size = s.size(withAttributes: attr)
         s.draw(at: NSPoint(x: (r.width - size.width) / 2,
                            y: (r.height - size.height) / 2),

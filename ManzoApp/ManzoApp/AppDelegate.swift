@@ -145,7 +145,7 @@ import AVFoundation
         panel.onAddTracks    = { [weak self] in self?.openFilePicker() }
         panel.onRemoveTracks = { [weak self] in
             guard let self else { return }
-            self.removeTrackAt(self.playlistManager.currentIndex)
+            self.removeTrackAt(self.playlistPanel?.currentIndex ?? self.playlistManager.currentIndex)
         }
         panel.onTrackSelected = { [weak self] index in
             self?.jumpToTrack(at: index)
