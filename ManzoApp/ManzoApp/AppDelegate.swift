@@ -497,13 +497,16 @@ extension AppDelegate {
     }
 
     func playYouTubeURL(_ youtubeURL: String) {
-        let ytdlpPath = Bundle.main.bundlePath + "/Contents/MacOS/yt-dlp"
+        let ytdlpPath  = Bundle.main.bundlePath + "/Contents/MacOS/yt-dlp"
+        let ffmpegPath = Bundle.main.bundlePath + "/Contents/MacOS/ffmpeg"
         NSLog("MANZO: resolving stream via manzo_open_url — %@", youtubeURL)
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let newHandle = youtubeURL.withCString { urlPtr in
                 ytdlpPath.withCString { ytPtr in
-                    manzo_open_url(urlPtr, ytPtr)
+                    ffmpegPath.withCString { ffPtr in
+                        manzo_open_url(urlPtr, ytPtr, ffPtr)
+                    }
                 }
             }
             guard let newHandle else {

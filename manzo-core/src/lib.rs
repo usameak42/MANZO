@@ -246,16 +246,17 @@ pub extern "C" fn manzo_open(path: *const std::os::raw::c_char) -> *mut ManzoHan
     Box::into_raw(Box::new(arc)) as *mut ManzoHandle
 }
 
-/// Opens a YouTube or streaming URL for playback via yt-dlp + curl.
+/// Opens a YouTube or streaming URL for playback via yt-dlp + ffmpeg.
 /// Non-blocking: resolves the CDN URL synchronously (~1–2 s), then returns immediately.
-/// A background thread streams audio chunks into the mpg123 feed buffer.
+/// A background thread transcodes via ffmpeg pipe:1 → MP3 → mpg123 feed buffer.
 /// Seek is a no-op for URL handles. Duration returns 0 (unknown).
 #[no_mangle]
 pub extern "C" fn manzo_open_url(
     url: *const std::os::raw::c_char,
     ytdlp_path: *const std::os::raw::c_char,
+    ffmpeg_path: *const std::os::raw::c_char,
 ) -> *mut ManzoHandle {
-    if url.is_null() || ytdlp_path.is_null() {
+    if url.is_null() || ytdlp_path.is_null() || ffmpeg_path.is_null() {
         return std::ptr::null_mut();
     }
     let url_str = unsafe {
@@ -266,6 +267,12 @@ pub extern "C" fn manzo_open_url(
     };
     let ytdlp_str = unsafe {
         match CStr::from_ptr(ytdlp_path).to_str() {
+            Ok(s) => s.to_owned(),
+            Err(_) => return std::ptr::null_mut(),
+        }
+    };
+    let ffmpeg_str = unsafe {
+        match CStr::from_ptr(ffmpeg_path).to_str() {
             Ok(s) => s.to_owned(),
             Err(_) => return std::ptr::null_mut(),
         }
@@ -326,16 +333,20 @@ pub extern "C" fn manzo_open_url(
         return std::ptr::null_mut();
     }
 
-    // Spawn reader thread: curl → stdout → mpsc channel
+    // Spawn reader thread: ffmpeg (transcode any format → MP3) → mpsc channel
+    // curl alone can't transcode; m4a/webm from YouTube needs ffmpeg to produce
+    // MP3 that mpg123 can decode.
     let (tx, rx) = mpsc::channel::<Vec<u8>>();
     std::thread::spawn(move || {
-        let mut child = match std::process::Command::new("curl")
-            .args(["-s", "-L", cdn_url.as_str()])
+        let mut child = match std::process::Command::new(&ffmpeg_str)
+            .args(["-v", "quiet", "-i", cdn_url.as_str(),
+                   "-vn", "-f", "mp3", "-ab", "128k", "pipe:1"])
             .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
             .spawn()
         {
             Ok(c) => c,
-            Err(_) => return,
+            Err(e) => { eprintln!("manzo_open_url: ffmpeg spawn failed: {}", e); return; },
         };
         let mut stdout = match child.stdout.take() {
             Some(s) => s,
