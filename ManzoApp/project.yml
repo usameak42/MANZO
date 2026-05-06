@@ -80,3 +80,23 @@ targets:
           fi
         outputFiles:
           - $(SRCROOT)/../manzo-core/target/aarch64-apple-darwin/release/libmanzo_core.a
+    postBuildScripts:
+      - name: "Bundle yt-dlp sidecar"
+        shell: /bin/zsh
+        script: |
+          set -e
+          DEST="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/MacOS/yt-dlp"
+          cp "$SRCROOT/ManzoApp/yt-dlp" "$DEST"
+          chmod +x "$DEST"
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/MacOS/yt-dlp
+      - name: "Bundle ffmpeg sidecar"
+        shell: /bin/zsh
+        script: |
+          set -e
+          DEST="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/MacOS/ffmpeg"
+          cp "$SRCROOT/ManzoApp/ffmpeg" "$DEST"
+          chmod +x "$DEST"
+          /usr/bin/codesign --force --sign - --timestamp=none "$DEST"
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/MacOS/ffmpeg

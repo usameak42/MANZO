@@ -10,26 +10,38 @@
 		35DB761CA4282A86B0447E3C /* ManzoPlaylistPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */; };
 		3DAF208BD04B15043D2BEECF /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D72C417C7828CF419FE9EAB8 /* main.swift */; };
 		48ACB43B09990F927D118BB8 /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */; };
+		525F8313D8322938151F840C /* ManzoMainWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3FFF3E1A6281BB105661266 /* ManzoMainWindow.swift */; };
 		56D6897176EC8070696391FD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB29267B5851BABE6CA438B /* AppDelegate.swift */; };
 		5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */; };
+		7020B1D17A75D2BC5BE32628 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6B875FD042952670DACEE80 /* Metal.framework */; };
 		92C66BB73A9E226356B3EA03 /* PlaylistManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E065D3297D23D9AB54A72798 /* PlaylistManager.swift */; };
+		B10CDB13AF21E9D6B8F4D0FF /* ManzoOnlineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCA63B4B64C07A7770521282 /* ManzoOnlineQueue.swift */; };
 		B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */; };
-		C3E4F5D6B7A8C9E0F1D2B3A4 /* ManzoMainWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C2E3F4D5B6A7C8E9F0D1B2 /* ManzoMainWindow.swift */; };
-		D3E4F5A6B7C8D9E0F1A2B3C4 /* ManzoEQPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E2F3A4C5D6E7F8A9B0C1D2 /* ManzoEQPanel.swift */; };
+		C7F33F01264032530DD9CCFD /* ManzoPlaylistPanel.swift.bak.txt in Resources */ = {isa = PBXBuildFile; fileRef = F2511218A7831B520FA80E29 /* ManzoPlaylistPanel.swift.bak.txt */; };
+		EB588AE6BB7883118C156855 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97DD12C03C895AB63667BAC7 /* MetalKit.framework */; };
+		F0E005EBA678872CBD98A034 /* Spectrum.metal in Sources */ = {isa = PBXBuildFile; fileRef = EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */; };
+		FEEA607CD0B0855C608C9B75 /* ManzoEQPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30245DFD8F9F4EAEB2B7393C /* ManzoEQPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1EB5F2C7136193BE0BC04FAB /* ManzoApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ManzoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30245DFD8F9F4EAEB2B7393C /* ManzoEQPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoEQPanel.swift; sourceTree = "<group>"; };
 		42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoPlaylistPanel.swift; sourceTree = "<group>"; };
+		5DB5A0AC41CFDF5A28390F26 /* yt-dlp */ = {isa = PBXFileReference; path = "yt-dlp"; sourceTree = "<group>"; };
 		5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
-		A1C2E3F4D5B6A7C8E9F0D1B2 /* ManzoMainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoMainWindow.swift; sourceTree = "<group>"; };
-		B1E2F3A4C5D6E7F8A9B0C1D2 /* ManzoEQPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoEQPanel.swift; sourceTree = "<group>"; };
+		97DD12C03C895AB63667BAC7 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		A3FFF3E1A6281BB105661266 /* ManzoMainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoMainWindow.swift; sourceTree = "<group>"; };
+		C6B875FD042952670DACEE80 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ManzoApp-Bridging-Header.h"; sourceTree = "<group>"; };
+		D1F4E73BB0F911D38E9896D1 /* ffmpeg */ = {isa = PBXFileReference; path = ffmpeg; sourceTree = "<group>"; };
 		D72C417C7828CF419FE9EAB8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		DCA63B4B64C07A7770521282 /* ManzoOnlineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManzoOnlineQueue.swift; sourceTree = "<group>"; };
 		E065D3297D23D9AB54A72798 /* PlaylistManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistManager.swift; sourceTree = "<group>"; };
+		EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Spectrum.metal; sourceTree = "<group>"; };
 		EFB29267B5851BABE6CA438B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		F2511218A7831B520FA80E29 /* ManzoPlaylistPanel.swift.bak.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ManzoPlaylistPanel.swift.bak.txt; sourceTree = "<group>"; };
 		F48C620D8FA3FA52946B7FA1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -41,6 +53,8 @@
 				5B17591C713B96DAA4BC40A6 /* CoreAudio.framework in Frameworks */,
 				48ACB43B09990F927D118BB8 /* AudioUnit.framework in Frameworks */,
 				B354761292C65BD34F34017C /* AudioToolbox.framework in Frameworks */,
+				7020B1D17A75D2BC5BE32628 /* Metal.framework in Frameworks */,
+				EB588AE6BB7883118C156855 /* MetalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,6 +76,8 @@
 				5EBB44D3CB8A63B914467EC6 /* AudioToolbox.framework */,
 				5E42FD1EDEE59BFCC7D6F2EC /* AudioUnit.framework */,
 				8C92FA755CD931A0D746B4A4 /* CoreAudio.framework */,
+				C6B875FD042952670DACEE80 /* Metal.framework */,
+				97DD12C03C895AB63667BAC7 /* MetalKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -70,13 +86,18 @@
 			isa = PBXGroup;
 			children = (
 				EFB29267B5851BABE6CA438B /* AppDelegate.swift */,
+				D1F4E73BB0F911D38E9896D1 /* ffmpeg */,
 				F48C620D8FA3FA52946B7FA1 /* Info.plist */,
 				D72C417C7828CF419FE9EAB8 /* main.swift */,
 				C9551B39664A6546DC356257 /* ManzoApp-Bridging-Header.h */,
-				A1C2E3F4D5B6A7C8E9F0D1B2 /* ManzoMainWindow.swift */,
-				B1E2F3A4C5D6E7F8A9B0C1D2 /* ManzoEQPanel.swift */,
+				30245DFD8F9F4EAEB2B7393C /* ManzoEQPanel.swift */,
+				A3FFF3E1A6281BB105661266 /* ManzoMainWindow.swift */,
+				DCA63B4B64C07A7770521282 /* ManzoOnlineQueue.swift */,
 				42CF7969E5C161D9BBF7AB5A /* ManzoPlaylistPanel.swift */,
+				F2511218A7831B520FA80E29 /* ManzoPlaylistPanel.swift.bak.txt */,
 				E065D3297D23D9AB54A72798 /* PlaylistManager.swift */,
+				EF1AF61A456B4D30647DB2D4 /* Spectrum.metal */,
+				5DB5A0AC41CFDF5A28390F26 /* yt-dlp */,
 			);
 			path = ManzoApp;
 			sourceTree = "<group>";
@@ -98,7 +119,10 @@
 			buildPhases = (
 				2F3D6DCB5E9CE89B658D7F1C /* Build Rust manzo-core */,
 				327452F039B495435AB72156 /* Sources */,
+				9E820781BAAB56D8F000D081 /* Resources */,
 				713FF368C1ACA6BD2B84529B /* Frameworks */,
+				CEE7AEEA0C4E1B7F590C075B /* Bundle yt-dlp sidecar */,
+				FFC4263E6DD154ABE9F69AAC /* Bundle ffmpeg sidecar */,
 			);
 			buildRules = (
 			);
@@ -141,6 +165,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		9E820781BAAB56D8F000D081 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C7F33F01264032530DD9CCFD /* ManzoPlaylistPanel.swift.bak.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXShellScriptBuildPhase section */
 		2F3D6DCB5E9CE89B658D7F1C /* Build Rust manzo-core */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -161,6 +196,44 @@
 			shellPath = /bin/zsh;
 			shellScript = "set -e\nexport PATH=\"$HOME/.cargo/bin:$PATH\"\ncargo build --release \\\n  --manifest-path \"$SRCROOT/../manzo-core/Cargo.toml\" \\\n  --target aarch64-apple-darwin\n# Re-generate the C header after build — hard-fail if cbindgen is absent\n(cd \"$SRCROOT/../manzo-core\" && cbindgen \\\n  --config cbindgen.toml \\\n  --output manzo_core.h) \\\n  || { echo \"error: cbindgen not found — install with: cargo install cbindgen\"; exit 1; }\n# Copy libmpg123.dylib to the stable release dir so Xcode linker can find -lmpg123\nMPG123_LIB=$(find \"$SRCROOT/../manzo-core/target/aarch64-apple-darwin/release/build\" \\\n  -name \"libmpg123.dylib\" -not -name \"libmpg123.0.dylib\" 2>/dev/null | head -1)\nif [ -n \"$MPG123_LIB\" ]; then\n  cp \"$MPG123_LIB\" \"$SRCROOT/../manzo-core/target/aarch64-apple-darwin/release/libmpg123.dylib\"\nfi\n";
 		};
+		CEE7AEEA0C4E1B7F590C075B /* Bundle yt-dlp sidecar */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle yt-dlp sidecar";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/MacOS/yt-dlp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/zsh;
+			shellScript = "set -e\nDEST=\"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/MacOS/yt-dlp\"\ncp \"$SRCROOT/ManzoApp/yt-dlp\" \"$DEST\"\nchmod +x \"$DEST\"\n";
+		};
+		FFC4263E6DD154ABE9F69AAC /* Bundle ffmpeg sidecar */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle ffmpeg sidecar";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/MacOS/ffmpeg",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/zsh;
+			shellScript = "set -e\nDEST=\"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/MacOS/ffmpeg\"\ncp \"$SRCROOT/ManzoApp/ffmpeg\" \"$DEST\"\nchmod +x \"$DEST\"\n/usr/bin/codesign --force --sign - --timestamp=none \"$DEST\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -169,10 +242,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				56D6897176EC8070696391FD /* AppDelegate.swift in Sources */,
-				C3E4F5D6B7A8C9E0F1D2B3A4 /* ManzoMainWindow.swift in Sources */,
-				D3E4F5A6B7C8D9E0F1A2B3C4 /* ManzoEQPanel.swift in Sources */,
+				FEEA607CD0B0855C608C9B75 /* ManzoEQPanel.swift in Sources */,
+				525F8313D8322938151F840C /* ManzoMainWindow.swift in Sources */,
+				B10CDB13AF21E9D6B8F4D0FF /* ManzoOnlineQueue.swift in Sources */,
 				35DB761CA4282A86B0447E3C /* ManzoPlaylistPanel.swift in Sources */,
 				92C66BB73A9E226356B3EA03 /* PlaylistManager.swift in Sources */,
+				F0E005EBA678872CBD98A034 /* Spectrum.metal in Sources */,
 				3DAF208BD04B15043D2BEECF /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

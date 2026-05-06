@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 
 @objc class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - State
@@ -25,10 +26,12 @@ import AppKit
     private var seekBarView: SeekBar?        = nil
     private var analyzerView: SpectrumView?  = nil
     private var currentDuration: Double      = 0
+    var avPlayer: AVPlayer?
 
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        stripBinaryQuarantines()
         buildMainMenu()
 
         NSLog("MANZO Phase 8: PlaylistManager loaded — %d tracks", playlistManager.tracks.count)
@@ -139,11 +142,6 @@ import AppKit
 
         // MARK: Phase 8 — Playlist panel (Claude Design API)
         let panel = ManzoPlaylistPanel()
-        panel.onClose = { [weak self] in
-            guard let self else { return }
-            (self.manzoWindow?.contentView as? ManzoMainWindowView)?.body.plBtn.isOnState = false
-            self.updatePLButtonAppearance()
-        }
         panel.onAddTracks    = { [weak self] in self?.openFilePicker() }
         panel.onRemoveTracks = { [weak self] in
             guard let self else { return }
@@ -158,6 +156,10 @@ import AppKit
         lastMainWindowOrigin = mainOrigin
         panel.setFrameAutosaveName("ManzoPlaylistPanel")
         playlistPanel = panel
+        playlistPanel?.onlineQueue = ManzoOnlineQueue()
+        playlistPanel?.onPlayOnline = { [weak self] track in
+            self?.playYouTubeURL(track.url.absoluteString)
+        }
         (win.contentView as? ManzoMainWindowView)?.body.plBtn.isOnState = false
 
         updatePLButtonAppearance()
@@ -327,16 +329,6 @@ import AppKit
 
     // MARK: - Helpers
 
-    private func resolveFixturePath(name: String, ext: String) -> String {
-        if let bundlePath = Bundle.main.path(forResource: name, ofType: ext) {
-            return bundlePath
-        }
-        if let envDir = ProcessInfo.processInfo.environment["MANZO_FIXTURE_DIR"] {
-            return (envDir as NSString).appendingPathComponent("\(name).\(ext)")
-        }
-        return ""
-    }
-
     private func addControl(_ view: NSView, to parent: NSView, top: CGFloat, leading: CGFloat, width: CGFloat, height: CGFloat) {
         view.translatesAutoresizingMaskIntoConstraints = false
         parent.addSubview(view)
@@ -486,6 +478,116 @@ extension AppDelegate {
             analyzerView?.isPlaying = true
             NSLog("MANZO Phase 8.1: handlePlayPauseButton — was PAUSED/STOPPED, now playing")
         }
+    }
+}
+
+// MARK: - Phase 10.1: YouTube Streaming
+
+extension AppDelegate {
+
+    func stripBinaryQuarantines() {
+        let key = "binary_quarantine_stripped_v2"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        let base = Bundle.main.bundlePath + "/Contents/MacOS/"
+        for bin in ["yt-dlp", "ffmpeg"] {
+            Process.launchedProcess(launchPath: "/usr/bin/xattr",
+                arguments: ["-d", "com.apple.quarantine", base + bin])
+        }
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    func playYouTubeURL(_ youtubeURL: String) {
+        let ytdlpPath  = Bundle.main.bundlePath + "/Contents/MacOS/yt-dlp"
+        let ffmpegPath = Bundle.main.bundlePath + "/Contents/MacOS/ffmpeg"
+        let tmpFile    = "/tmp/manzo_stream.mp3"
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            // Step 1: yt-dlp → CDN audio URL
+            let ytProc = Process()
+            ytProc.executableURL = URL(fileURLWithPath: ytdlpPath)
+            ytProc.arguments = ["--get-url", "--format", "bestaudio",
+                                "--no-playlist", youtubeURL]
+            let ytPipe = Pipe()
+            ytProc.standardOutput = ytPipe
+            ytProc.standardError  = Pipe()
+            try? ytProc.run()
+            ytProc.waitUntilExit()
+
+            let ytData = ytPipe.fileHandleForReading.readDataToEndOfFile()
+            guard let cdnURL = String(data: ytData, encoding: .utf8)?
+                .components(separatedBy: "\n")
+                .first(where: { !$0.isEmpty }) else {
+                NSLog("MANZO: yt-dlp failed to resolve CDN URL")
+                return
+            }
+            NSLog("MANZO: CDN URL: %.80@", cdnURL)
+
+            // Step 2: prepare tmp file
+            try? FileManager.default.removeItem(atPath: tmpFile)
+            FileManager.default.createFile(atPath: tmpFile, contents: nil)
+            guard let outHandle = FileHandle(forWritingAtPath: tmpFile) else {
+                NSLog("MANZO: cannot open %@ for writing", tmpFile)
+                return
+            }
+
+            // Step 3: ffmpeg pipe:1 → stdout → Swift writes chunks to file
+            let ffProc = Process()
+            ffProc.executableURL = URL(fileURLWithPath: ffmpegPath)
+            ffProc.arguments = ["-y", "-i", cdnURL,
+                                "-vn", "-f", "mp3", "-ab", "128k", "pipe:1"]
+            let ffPipe = Pipe()
+            ffProc.standardOutput = ffPipe
+            ffProc.standardError  = Pipe()
+
+            var totalBytes    = 0
+            let threshold     = 512 * 1024
+            var didOpenStream = false
+
+            ffPipe.fileHandleForReading.readabilityHandler = { fh in
+                let chunk = fh.availableData
+                guard !chunk.isEmpty else { return }
+                outHandle.write(chunk)
+                totalBytes += chunk.count
+
+                if !didOpenStream && totalBytes >= threshold {
+                    didOpenStream = true
+                    outHandle.synchronizeFile()
+                    NSLog("MANZO: 512 KB buffered (%d bytes) — opening pipeline", totalBytes)
+                    DispatchQueue.main.async { self.openStreamFile(tmpFile) }
+                }
+            }
+
+            try? ffProc.run()
+            ffProc.waitUntilExit()
+            ffPipe.fileHandleForReading.readabilityHandler = nil
+            outHandle.closeFile()
+            NSLog("MANZO: ffmpeg done — total %d bytes written", totalBytes)
+        }
+    }
+
+    private func openStreamFile(_ path: String) {
+        if let handle = manzoHandle {
+            analyzerView?.manzoHandle = nil
+            manzo_stop(handle)
+            manzo_close(handle)
+            manzoHandle = nil
+        }
+
+        manzoHandle = manzo_open(path)
+        guard let newHandle = manzoHandle else {
+            NSLog("MANZO: manzo_open returned null for stream file")
+            return
+        }
+        manzo_play(newHandle)
+        analyzerView?.manzoHandle = newHandle
+        marqueeView?.text = "★ YouTube Stream     "
+        specsLabel?.stringValue = "128 kbps · 44 kHz · Stream"
+
+        if pollTimer == nil {
+            pollTimer = Timer.scheduledTimer(timeInterval: 0.1, target: self,
+                selector: #selector(pollPlaybackState), userInfo: nil, repeats: true)
+        }
+        NSLog("MANZO: YouTube stream live via manzo pipeline")
     }
 }
 
