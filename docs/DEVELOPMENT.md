@@ -165,6 +165,7 @@ These constraints come from spike validation and must be respected in all Swift 
 - **P3 colors only.** Use `CGColor(colorSpace: .displayP3, components: [...])` for every brand color — never `NSColor` sRGB convenience initializers.
 - **One `NSVisualEffectView` per window.** The single `.behindWindow` view lives at the window root. Never add a nested `NSVisualEffectView` with material `.behindWindow` inside the view hierarchy.
 - **CALayer-only inner panels.** Set `wantsLayer = true` and `isOpaque = false` on inner panel views; do not wrap them in `NSVisualEffectView`.
+- **Native Window Docking.** Use `addChildWindow(_:ordered:)` for syncing panel movement rather than tracking window frames.
 - **`shouldRasterize` requires scale.** If you set `layer.shouldRasterize = true`, always also set `layer.rasterizationScale = 2.0` for Retina display correctness.
 - **Float32 audio pipeline.** All audio data between mpg123, the DSP chain, and cpal must stay as `Float32` — no `Int16` intermediate conversions.
 

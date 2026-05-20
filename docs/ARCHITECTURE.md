@@ -173,15 +173,25 @@ Build configuration: `ARCHS = arm64`, `VALID_ARCHS = arm64`, `MACOSX_DEPLOYMENT_
 ### Window Hierarchy
 
 ```
-NSWindow (.borderless, .resizable, isOpaque=false)
-└── NSVisualEffectView (.behindWindow)   ← EXACTLY ONE per window
-    ├── [Inner panels]                   ← CALayer-only (wantsLayer=true, isOpaque=false)
-    │   └── NeoAeroLayer 5-stack         ← CAGradientLayer + CAReplicatorLayer
-    ├── Spectrum MTKView                 ← Metal, rgba16Float, P3 colorspace
-    └── [Transient overlays]             ← NSVisualEffectView(.withinWindow) ONLY
+NSWindow (.borderless, .resizable, isOpaque=false) (Main Window)
+├── NSVisualEffectView (.behindWindow)   ← EXACTLY ONE per window root
+│   ├── [Inner panels]                   ← CALayer-only (wantsLayer=true, isOpaque=false)
+│   │   └── NeoAeroLayer 5-stack         ← CAGradientLayer + CAReplicatorLayer
+│   ├── Spectrum MTKView                 ← Metal, rgba16Float, P3 colorspace
+│   └── [Transient overlays]             ← NSVisualEffectView(.withinWindow) ONLY
+│
+├── Child: NSWindow (Playlist Editor)    ← Bound to Main Window via addChildWindow
+│   └── Child: NSWindow (Equalizer)      ← Bound to Playlist Window via addChildWindow
 ```
 
 The single `.behindWindow` `NSVisualEffectView` at the window root captures the desktop compositor buffer and provides refraction. Inner panels are semi-transparent CALayer subtrees (alpha ≈ 0.35–0.4) that appear as glass-on-glass without a second blur pass. Nesting a second `.behindWindow` view produces a double-blur artifact (milky/washed-out) — this constraint is hard.
+
+### Window Magnetism & Docking
+Winamp-style magnetic window docking is achieved purely via AppKit's native `NSWindow.addChildWindow(_:ordered:)`. 
+- **Zero-lag Synchronization:** When a window is docked, it is added as a child of the window above it. Dragging the parent window moves all children synchronously at the compositor level.
+- **Unified Hierarchy:** The Equalizer docks to the Playlist Editor, and the Playlist Editor docks to the Main Window.
+- **Native Lifecycle:** Minimizing or closing the Main Window natively cascades to all attached child windows. When docked, bulky titlebars disappear leaving only a 1-pixel separator line to create a completely flush UI.
+
 
 ### Neo-Aero Layer Stack (per panel)
 
